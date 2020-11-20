@@ -5,6 +5,7 @@
 #include "mmu.h"
 #include "proc.h"
 #include "x86.h"
+#include "vesamode.h"
 
 static void startothers(void);
 static void mpmain(void)  __attribute__((noreturn));
@@ -33,6 +34,7 @@ main(void)
   fileinit();      // file table
   iinit();         // inode cache
   ideinit();       // disk
+  vesamodeinit();  // init VESA mode information
   if(!ismp)
     timerinit();   // uniprocessor timer
   startothers();   // start other processors
