@@ -36,6 +36,17 @@ seta20.2:
   movb    $0xdf,%al               # 0xdf -> port 0x60
   outb    %al,$0x60
 
+  # Get VESA mode
+  movw    $0x1000, %di            # %di: the address to save VESA mode info
+  movw    $0x4f01, %ax            # %ax: 0x4f01 is to get VESA mode info
+  movw    $0x4114, %cx            # %cx: 0x4114 mean 800*600(5:6:5) mode
+  int     $0x10
+
+  # Set VESA mode
+  movw    $0x4f02, %ax            # %ax: 0x4f02 is to set VESA mode info
+  movw    $0x4114, %bx            # %bx: 0x4114 mean 800*600(5:6:5) mode
+  int     $0x10
+
   # Switch from real to protected mode.  Use a bootstrap GDT that makes
   # virtual addresses map directly to physical addresses so that the
   # effective memory map doesn't change during the transition.
