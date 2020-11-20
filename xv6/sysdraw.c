@@ -8,8 +8,7 @@ int set_color(int x, int y, int color) {
     if (x >= SCREEN_WIDTH || y >= SCREEN_HEIGHT || color >= 65536) {
         return -1;
     }
-    cprintf("SET x = %d y = %d color = %d from = %d\n", x, y, color, *VESA_ADDR);
-    // VESA_ADDR[x + y * SCREEN_WIDTH] = (unsigned short) color;
+    VESA_ADDR[x + y * SCREEN_WIDTH] = (unsigned short) color;
     return 0;
 }
 
