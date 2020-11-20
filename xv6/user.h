@@ -22,6 +22,8 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
+int drawrect(int xl, int yl, int width, int height, int color);
+int drawarea(int xl, int yl, int width, int height, int *colors);
 
 // ulib.c
 int stat(char*, struct stat*);
