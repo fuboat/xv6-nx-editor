@@ -4,6 +4,7 @@
 #include "defs.h"
 #include "param.h"
 
+
 int set_color(int x, int y, int color) {
     if (x >= SCREEN_WIDTH || y >= SCREEN_HEIGHT || color >= 65536) {
         return -1;
@@ -47,10 +48,16 @@ int sys_drawarea(void) {
 
     int x, y;
 
-    for (y = yl; y<yl+width; ++y)
+    for (y = yl; y<yl+height; ++y)
         for (x = xl; x < xl+width; ++x) {
-            set_color(x, y, colors[x-xl + (y-yl) * SCREEN_WIDTH]);
+            set_color(x, y, colors[x-xl + (y-yl) * width]);
         }
 
+cprintf("drawarea:\n");
+for (int j=0;j<16;++j){
+    for (int i = 0; i < 8; ++i)
+        cprintf("%d",colors[i+j*8]);
+    cprintf("\n");
+}
     return 0;
 }

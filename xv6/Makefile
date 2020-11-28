@@ -172,9 +172,10 @@ UPROGS=\
 	_usertests\
 	_wc\
 	_zombie\
+	_init_ascii\
 
 fs.img: mkfs README $(UPROGS)
-	./mkfs fs.img README $(UPROGS)
+	./mkfs fs.img README $(UPROGS) hankaku.txt
 
 -include *.d
 

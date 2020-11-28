@@ -5,7 +5,7 @@
 #include "user.h"
 #include "fcntl.h"
 
-char *argv[] = { "sh", 0 };
+char *argv[] = { "init_ascii", 0 };
 
 int
 main(void)
@@ -29,7 +29,7 @@ drawrect(0,0,800,600,65535);
       exit();
     }
     if(pid == 0){
-      exec("sh", argv);
+      exec("init_ascii", argv);
       printf(1, "init: exec sh failed\n");
       exit();
     }
