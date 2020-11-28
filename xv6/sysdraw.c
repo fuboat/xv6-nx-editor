@@ -73,5 +73,11 @@ int sys_drawarea(void) {
     drawarea(xl, yl, width, height, colors);
     update();
 
+cprintf("drawarea:\n");
+for (int j=0;j<16;++j){
+    for (int i = 0; i < 8; ++i)
+        cprintf("%d",colors[i+j*8]);
+    cprintf("\n");
+}
     return 0;
 }

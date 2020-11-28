@@ -5,7 +5,7 @@
 #include "user.h"
 #include "fcntl.h"
 
-char *argv[] = {"textframe", 0};
+char *argv[] = { "init_ascii", 0 };
 
 int main(void)
 {
@@ -30,10 +30,9 @@ int main(void)
       printf(1, "init: fork failed\n");
       exit();
     }
-    if (pid == 0)
-    {
-      exec("textframe", argv);
-      printf(1, "init: exec textframe failed\n");
+    if(pid == 0){
+      exec("init_ascii", argv);
+      printf(1, "init: exec sh failed\n");
       exit();
     }
     while ((wpid = wait()) >= 0 && wpid != pid)

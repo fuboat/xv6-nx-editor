@@ -22,4 +22,3 @@
 #define SYS_close  21
 #define SYS_drawrect 22
 #define SYS_drawarea 23
-
