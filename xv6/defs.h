@@ -70,6 +70,10 @@ void            kinit2(void*, void*);
 // kbd.c
 void            kbdintr(void);
 
+// mouse.c
+void            mouseinit(void);
+void            mouseintr(void);
+
 // lapic.c
 int             cpunum(void);
 extern volatile uint*    lapic;
@@ -176,6 +180,11 @@ void            switchuvm(struct proc*);
 void            switchkvm(void);
 int             copyout(pde_t*, uint, void*, uint);
 void            clearpteu(pde_t *pgdir, char *uva);
+
+// for gui
+int             drawrect(const int xl, const int yl, const int width, const int height, int color);
+int             drawarea(const int xl, const int yl, const int width, const int height, int *colors);
+void            update();
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

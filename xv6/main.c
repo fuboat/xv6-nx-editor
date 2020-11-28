@@ -35,6 +35,7 @@ main(void)
   iinit();         // inode cache
   ideinit();       // disk
   vesamodeinit();  // init VESA mode information
+  mouseinit();     // mouse
   if(!ismp)
     timerinit();   // uniprocessor timer
   startothers();   // start other processors

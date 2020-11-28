@@ -46,5 +46,7 @@ kbdgetc(void)
 void
 kbdintr(void)
 {
-  consoleintr(kbdgetc);
+  int c = kbdgetc();
+  cprintf("n = %d, c = %c\n", c, c);
+  // consoleintr(kbdgetc);
 }
