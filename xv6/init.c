@@ -18,7 +18,7 @@ main(void)
   }
   dup(0);  // stdout
   dup(0);  // stderr
-drawrect(0,0,800,600,65535);
+  drawrect(0,0,800,600,65535);
   printf(1, "init: try to draw background\n");
 
   for(;;){
