@@ -100,6 +100,8 @@ extern int sys_unlink(void);
 extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_uptime(void);
+extern int sys_get_msg(void);
+extern int sys_update(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -125,6 +127,8 @@ static int (*syscalls[])(void) = {
 [SYS_close]   sys_close,
 [SYS_drawarea]sys_drawarea,
 [SYS_drawrect]sys_drawrect,
+[SYS_get_msg] sys_get_msg,
+[SYS_update]  sys_update,
 };
 
 void

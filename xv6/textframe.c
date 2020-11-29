@@ -277,11 +277,11 @@ int textframe_write(struct textframe *text, char *filename)
     return 0;
 }
 
-int main()
-{
-    struct textframe *text = malloc(sizeof(struct textframe));
-    memset(text, 0, sizeof(*text));
-    char *filename = "1.txt";
-    int t = textframe_write(text, filename);
-    t = textframe_read(text, filename);
-}
+// int main()
+// {
+//     struct textframe *text = malloc(sizeof(struct textframe));
+//     memset(text, 0, sizeof(*text));
+//     char *filename = "1.txt";
+//     int t = textframe_write(text, filename);
+//     t = textframe_read(text, filename);
+// }

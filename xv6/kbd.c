@@ -47,6 +47,6 @@ void
 kbdintr(void)
 {
   int c = kbdgetc();
-  cprintf("n = %d, c = %c\n", c, c);
+  add_kbd_msg(c);
   // consoleintr(kbdgetc);
 }

@@ -58,12 +58,9 @@ void* get_text_point(char c){
     return char_to_point[num];
 }
 
-int main() {
-    char_point_init();
-    drawrect(0,0,800,600,65535);
-    drawarea(0,0,8,16,get_text_area('a'));
-    while(1){
+// int main() {
+//     while(1){
         
-    }
-    return 0;
-}
+//     }
+//     return 0;
+// }

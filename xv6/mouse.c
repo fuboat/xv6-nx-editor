@@ -65,6 +65,8 @@ void mouseintr(void) {
         // data means y movement.
         y_delta = data - y_sign * 256;
 
+        update_area(x_pos, y_pos, 10, 10);
+
         x_pos += x_delta;
         y_pos -= y_delta;
 
@@ -73,10 +75,8 @@ void mouseintr(void) {
         CHECK_IN_RANGE(y_pos, MOUSE_Y_MIN, MOUSE_Y_MAX);
 #undef  CHECK_IN_RANGE
 
-        cprintf("MOUSE x_pos = %d, y_pos = %d\n", x_pos, y_pos);
-        drawrect(0, 0, 800, 600, 0);
-        drawrect(x_pos, y_pos, 10, 10, 65535);
-        update();
+        // cprintf("MOUSE x_pos = %d, y_pos = %d\n", x_pos, y_pos);
+        drawrect_force(x_pos, y_pos, 10, 10, 0);
 
         // all information get. a new circle.
         count = 0;

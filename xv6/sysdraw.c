@@ -13,23 +13,58 @@ void update() {
     memmove(VESA_ADDR, VESA_TEMP, sizeof (ushort) * SCREEN_WIDTH_EXPECT * SCREEN_WIDTH_EXPECT);
 }
 
+void update_area(int xl, int yl, int width, int height) {
+    int x, y;
+    for (y = yl; y < yl + height; ++ y)
+        for (x = xl; x < xl + width; ++ x) {
+            VESA_ADDR[x + y * SCREEN_WIDTH] = VESA_TEMP[x + y * SCREEN_WIDTH];
+        }
+}
+
+void reverse_update() {
+    memmove(VESA_TEMP, VESA_ADDR, sizeof (ushort) * SCREEN_WIDTH_EXPECT * SCREEN_WIDTH_EXPECT);
+}
+
 int set_color(int x, int y, int color) {
-    if (x >= SCREEN_WIDTH || y >= SCREEN_HEIGHT || color >= 65536) {
+    if (x >= SCREEN_WIDTH || y >= SCREEN_HEIGHT || color >= 65536 || color < 0) {
         return -1;
     }
     VESA_TEMP[x + y * SCREEN_WIDTH] = (unsigned short) color;
     return 0;
 }
+
+int set_color_force(int x, int y, int color) {
+    if (x >= SCREEN_WIDTH || y >= SCREEN_HEIGHT || color >= 65536 || color < 0) {
+        return -1;
+    }
+    VESA_ADDR[x + y * SCREEN_WIDTH] = (unsigned short) color;
+    return 0;
+}
+
+int drawrect_force(int xl, int yl, int width, int height, int color) {
+    int x, y;
+    for (y = yl; y < yl + height; ++ y)
+        for (x = xl; x < xl + width; ++ x) {
+            set_color_force(x, y, color);
+        }
+}
+
 // (2^5-1, 0, 0) 31 << 11
 // (0, 2^6-1, 0) 63 << 5
 // 将点 (xl, yl) 到点 (xl + width, yl + height) 的范围变成颜色 color.
 
 int drawrect(int xl, int yl, int width, int height, int color) {
-    int x, y;
-    for (y = yl; y < yl + height; ++ y)
-        for (x = xl; x < xl + width; ++ x) {
-            set_color(x, y, color);
-        }
+    if (color >= 65536 || color < 0) {
+        return -1;
+    } else if (xl == 0 && yl == 0 && width == 800 && height == 600 && color == 65535) {
+        memset(VESA_TEMP, 0xff, sizeof(ushort) * SCREEN_WIDTH * SCREEN_HEIGHT);
+    } else {
+        int x, y;
+        for (y = yl; y < yl + height; ++ y)
+            for (x = xl; x < xl + width; ++ x) {
+                set_color(x, y, color);
+            }
+    }
 }
 
 int drawarea(int xl, int yl, int width, int height, int *colors) {
@@ -53,7 +88,6 @@ int sys_drawrect(void)
     }
 
     drawrect(xl, yl, width, height, color);
-    update();
 
     return 0;
 }
@@ -71,13 +105,11 @@ int sys_drawarea(void) {
     }
 
     drawarea(xl, yl, width, height, colors);
-    update();
 
-cprintf("drawarea:\n");
-for (int j=0;j<16;++j){
-    for (int i = 0; i < 8; ++i)
-        cprintf("%d",colors[i+j*8]);
-    cprintf("\n");
+    return 0;
 }
+
+int sys_update(void) {
+    update();
     return 0;
 }

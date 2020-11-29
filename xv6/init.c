@@ -5,7 +5,7 @@
 #include "user.h"
 #include "fcntl.h"
 
-char *argv[] = { "init_ascii", 0 };
+char *argv[] = { "editor", 0 };
 
 int main(void)
 {
@@ -31,8 +31,8 @@ int main(void)
       exit();
     }
     if(pid == 0){
-      exec("init_ascii", argv);
-      printf(1, "init: exec sh failed\n");
+      exec("editor", argv);
+      printf(1, "init: exec editor failed\n");
       exit();
     }
     while ((wpid = wait()) >= 0 && wpid != pid)

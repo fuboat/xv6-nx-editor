@@ -24,6 +24,7 @@ int sleep(int);
 int uptime(void);
 int drawrect(int xl, int yl, int width, int height, int color);
 int drawarea(int xl, int yl, int width, int height, int *colors);
+int get_msg(void);
 
 // ulib.c
 int stat(char*, struct stat*);
