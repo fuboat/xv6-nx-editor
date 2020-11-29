@@ -47,6 +47,7 @@ int drawrect_force(int xl, int yl, int width, int height, int color) {
         for (x = xl; x < xl + width; ++ x) {
             set_color_force(x, y, color);
         }
+    return 0;
 }
 
 // (2^5-1, 0, 0) 31 << 11
@@ -65,7 +66,11 @@ int drawrect(int xl, int yl, int width, int height, int color) {
                 set_color(x, y, color);
             }
     }
+    return 0;
+
 }
+
+
 
 int drawarea(int xl, int yl, int width, int height, int *colors) {
     int x, y;
@@ -74,6 +79,24 @@ int drawarea(int xl, int yl, int width, int height, int *colors) {
         for (x = xl; x < xl+width; ++x) {
             set_color(x, y, colors[x-xl + (y-yl) * width]);
         }
+    
+    return 0;
+}
+
+
+int drawarea_short(int xl, int yl, int width, int height, ushort *colors) {
+    if (xl == 0 && yl == 0 && width == 800 && height == 600) {
+        memmove(VESA_TEMP, colors, sizeof(ushort) * width * height);
+        return 0;
+    }
+
+    int x, y;
+
+    for (y = yl; y<yl+height; ++y)
+        for (x = xl; x < xl+width; ++x) {
+            set_color(x, y, colors[x-xl + (y-yl) * width]);
+        }
+    return 0;
 }
 
 int sys_drawrect(void)
@@ -88,6 +111,23 @@ int sys_drawrect(void)
     }
 
     drawrect(xl, yl, width, height, color);
+
+    return 0;
+}
+
+int sys_drawarea_short(void) {
+    int xl, yl, width, height;
+    ushort *colors;
+
+    if (argint(0, &xl) < 0 ||
+    argint(1, &yl) < 0 ||
+    argint(2, &width) < 0 ||
+    argint(3, &height) < 0 ||
+    argptr(4, (void*) &colors, sizeof(ushort) * width * height) < 0) {
+        return -1;
+    }
+
+    drawarea_short(xl, yl, width, height, colors);
 
     return 0;
 }

@@ -22,5 +22,6 @@
 #define SYS_close  21
 #define SYS_drawrect 22
 #define SYS_drawarea 23
+#define SYS_drawarea_short 26
 #define SYS_update  24
 #define SYS_get_msg 25

@@ -4,60 +4,191 @@
 #include "fcntl.h"
 #include "textframe.h"
 #include "init_ascii.h"
+#include "background.h"
+
+#define RGB(r,g,b) ((r >> 3) << 11 | (g >> 2) << 5 | (b >> 3))
 
 void refresh(struct textframe *text) {
-    int r;
-    drawrect(0, 0, 800, 600, 65535);
-    for (r = 0; r < text->maxrow; ++ r) {
+    int beginx = 236, beginy = 55;
+    drawarea_short(0, 0, 800, 600, background);
+    printf(1, "text->cursor_row = %d, text->cursor_col = %d\n", text->cursor_row, text->cursor_col);
+    drawrect(beginx + text->cursor_col * 8, beginy + text->cursor_row * 16, 8, 16, RGB(0xa0, 0xa0, 0xa0));
+    for (int r = 0; r < text->maxrow; ++ r) {
         int len = strlen(text->data[r]), col;
         for (col = 0; col < len; ++ col) {
-            drawarea(col * 8, r * 16, 8, 16, get_text_area(text->data[r][col]));
+            drawarea(beginx + col * 8, beginy + r * 16, 8, 16, get_text_area(text->data[r][col]));
         }
     }
     update();
 }
 
-void putc_to_str(char **s, int c) {
+void putc_to_str(struct textframe * text, int ch) {
+    char **s = &(text->data[text->cursor_row]);
     int len = strlen(*s);
     char *new_s = (char*) malloc(len + 2);
     memmove(new_s, *s, len);
-    new_s[len] = c;
-    new_s[len+1] = '\0';
+    for (int i = len + 1; i > text->cursor_col; -- i)
+        new_s[i] = new_s[i - 1];
+    new_s[text->cursor_col] = ch;
+    new_s[len+1] = 0;
     free(*s);
     *s = new_s;
 }
 
-void backspace_to_str(char **s) {
+void backspace_to_str(struct textframe * text) {
+    char **s = &(text->data[text->cursor_row]);
+    int p = text->cursor_col;
     int len = strlen(*s);
-    if (len > 0)
-        (*s)[len-1] = '\0';
+    int i;
+    for (i = p; i < len; ++ i)
+        (*s)[i] = (*s)[i + 1];
 }
 
-#define BACKSPACE  8
-#define ENTER      10
+void move_to_next_char(struct textframe * text) {
+    int len = strlen(text->data[text->cursor_row]);
+    if (text->cursor_col < len)
+        ++ text->cursor_col;
+    else if (text->cursor_row + 1 < text->maxrow) {
+        ++ text->cursor_row;
+        text->cursor_col = 0;
+    }
+}
 
+void move_to_last_char(struct textframe * text) {
+    if (text->cursor_col > 0)
+        -- text->cursor_col;
+    else if (text->cursor_row > 0)
+    {
+        -- text->cursor_row;
+        text->cursor_col = strlen(text->data[text->cursor_row]);
+    }
+}
+
+void move_to_next_line(struct textframe * text) {
+    if (text->cursor_row + 1 < text->maxrow) {
+        ++ text->cursor_row;
+    }
+
+    int len = strlen(text->data[text->cursor_row]);
+    if (text->cursor_col > len) {
+        text->cursor_col = len;
+    }
+}
+
+void move_to_last_line(struct textframe * text) {
+    if (text->cursor_row > 0) {
+        -- text->cursor_row;
+    }
+
+    int len = strlen(text->data[text->cursor_row]);
+    if (text->cursor_col > len) {
+        text->cursor_col = len;
+    }
+}
+
+void new_line_to_editor(struct textframe * text) {
+    int len = text->maxrow;
+    char ** new_data = malloc(sizeof(char*) * (len + 1));
+    memmove(new_data, text->data, sizeof(char*) * len);
+
+    for (int r = len; r > text->cursor_row + 1; -- r) {
+        new_data[r] = new_data[r - 1];
+    }
+    new_data[text->cursor_row + 1] = malloc(1);
+    new_data[text->cursor_row + 1][0] = '\0';
+
+    text->data = new_data;
+    text->maxrow = len + 1;
+
+    move_to_next_line(text);
+}
+
+#define BACKSPACE   8
+#define ENTER       10
+#define LEFT_ARROW  228
+#define RIGHT_ARROW 229
+#define UP_ARROW    226
+#define DOWN_ARROW  227
+
+ushort background[800 * 600];
+
+void background_init() {
+    int height = 600;
+    int width = 800;
+    int total = height * width;
+
+    for (int i = 0; i < total; ++ i) {
+        background[i] = 59196;
+    }
+
+    for (int i = 0; i < 52 * 800; ++ i) {
+        background[i] = 65535;
+    }
+
+    int x1 = 1, xe = 229, y1 = 54, y1_e = 85;
+
+    for (int x = x1; x < xe; ++ x) {
+        for (int y = y1; y < y1_e; ++ y) {
+            background[x + y * width] = 50712;
+        }
+    }
+
+    int x2 = 1, y2 = 90, y2_e = 600;
+
+    for (int x = x2; x < xe; ++ x) {
+        for (int y = y2; y < y2_e; ++ y) {
+            background[x + y * width] = 50712;
+        }
+    }
+}
 
 int main() {
     struct textframe text;
+    
+    text.cursor_row = 0, text.cursor_col = 0;
 
+    background_init();
     char_point_init();
     textframe_write(&text, "1.txt");
     textframe_read(&text, "1.txt");
 
+    refresh(&text);
+
     while (1) {
         int c = get_msg();
+        int len;
+
         if (c != 0) {
-            // printf(1, "kbd num = %d, c = %c\n", c, c);
+            printf(1, "kbd num = %d, c = %c\n", c, c);
 
             switch (c)
             {
-            case BACKSPACE:
-                backspace_to_str(&(text.data[text.maxrow-1]));
-                break;
             case ENTER:
+                new_line_to_editor(&text);
+                break;
+
+            case LEFT_ARROW: case BACKSPACE:
+                move_to_last_char(&text);
+
+                if (c == BACKSPACE) {
+                    backspace_to_str(&text);
+                }
+
+                break;
+
+            case RIGHT_ARROW:
+                move_to_next_char(&text);
+                break;
+
+            case UP_ARROW:
+                move_to_last_line(&text);
+                break; 
+            case DOWN_ARROW:
+                move_to_next_line(&text);
                 break;
             default:
-                putc_to_str(&(text.data[text.maxrow-1]), c);
+                putc_to_str(&text, c);
+                move_to_next_char(&text);
                 break;
             }
 
