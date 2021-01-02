@@ -277,6 +277,90 @@ int textframe_write(struct textframe *text, char *filename)
     return 0;
 }
 
+//提取一段文本
+struct textframe *textframe_extract(struct textframe *text, int start_row, int start_col, int end_row, int end_col)
+{
+    struct textframe *res_text = (struct textframe *)malloc(sizeof(struct textframe));
+    int max_row = end_row - start_row + 1;
+    if (max_row <= 0)
+    {
+        res_text->maxrow = -1;
+        return res_text;
+    }
+    res_text->maxrow = max_row;
+    res_text->data = (char **)malloc(sizeof(char *) * max_row);
+    int start_line = start_row;
+    int line_len = strlen(text->data[start_row]) - start_col;
+    for (int i = 0; i < max_row; i++)
+    {
+        res_text->data[i] = substr(text->data[start_row], start_col, line_len);
+        start_row++;
+        start_col = 0;
+        line_len = strlen(text->data[start_row]);
+        if (i == max_row - 1)
+        {
+            line_len = end_col + 1;
+        }
+    }
+    res_text->col = 0;
+    res_text->row = 0;
+    res_text->cursor_col = 0;
+    res_text->cursor_row = 0;
+    return res_text;
+}
+//删除一段文本
+struct textframe *textframe_delete(struct textframe *text, int start_row, int start_col, int end_row, int end_col)
+{
+    struct textframe *res_text = (struct textframe *)malloc(sizeof(struct textframe));
+    int max_row = text->maxrow - (end_row - start_row + 1);
+    if (start_col != 0)
+    {
+        max_row++;
+    }
+    int end_len = strlen(text->data[end_row]);
+    if (end_col != end_len - 1)
+    {
+        max_row++;
+    }
+
+    res_text->maxrow = max_row;
+    res_text->data = (char **)malloc(sizeof(char *) * max_row);
+    int index = 0;
+    int i = 0;
+    while (1)
+    {
+        if (index < start_row || index > end_row)
+        {
+            res_text->data[i] = substr(text->data[index], 0, strlen(text->data[index]));
+            index++;
+        }
+        else if (index == start_row && start_col != 0)
+        {
+            res_text->data[i] = substr(text->data[index], 0, start_col + 1);
+            index = end_row;
+        }
+        else if (index == end_row && end_col != end_len - 1)
+        {
+            res_text->data[i] = substr(text->data[index], end_col, end_len - end_col);
+            index++;
+        }
+        i++;
+        if (i >= max_row)
+        {
+            break;
+        }
+    }
+    res_text->col = text->col;
+    res_text->row = text->row;
+    res_text->cursor_col = text->cursor_col;
+    res_text->cursor_row = text->cursor_row;
+    return res_text;
+}
+//插入一段文本
+struct textframe *textframe_insert(struct textframe *text, struct textframe *in_text, int start_row, int start_col)
+{
+}
+
 // int main()
 // {
 //     struct textframe *text = malloc(sizeof(struct textframe));
