@@ -191,6 +191,14 @@ void            update();
 void            update_area(int xl, int yl, int width, int height);
 int             drawrect_force(const int xl, const int yl, const int width, const int height, int color);
 
+enum MSG_TYPE {
+    KEYBOARD = 0,
+    MOUSE_LEFT_PRESS,
+    MOUSE_LEFT_RELEASE,
+    MOUSE_RIGHT_PRESS,
+    MOUSE_RIGHT_RELEASE
+};
+
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

@@ -36,6 +36,9 @@ void mouseintr(void) {
     static int x_sign, y_sign;
     static int btn_left, btn_right, btn_mid;
 
+    static int btn_left_down = 0;
+    static int btn_right_down = 0;
+
     static int x_delta, y_delta;
 
     static int x_pos, y_pos;
@@ -77,6 +80,8 @@ void mouseintr(void) {
 
         // cprintf("MOUSE x_pos = %d, y_pos = %d\n", x_pos, y_pos);
         drawrect_force(x_pos, y_pos, 10, 10, 0);
+
+        
 
         // all information get. a new circle.
         count = 0;

@@ -1,27 +1,20 @@
-#pragma once
-// size of Gui
-#define screen_width 800
-#define screen_height 600
-// size of word
-#define word_width 15
-#define word_height 20
-// size of cursor
-#define cursor_width 12
-#define cursor_height 19
+#include "textframe.h"
 
-// window type
-#define menu 0
-#define notice 1
-#define editor 2
+struct Area {
+    int x, y;
+    int width, height;
+};
 
-// size of window
-#define editor_width 800
-#define editor_height 600
+struct LineEdit {
+    struct Area area;
 
-#define notice_width 200
-#define notice_height 50
+    struct textframe* text;
+    void * parent;
+    char * parent_type; /* "FileListBuffer" */
+};
 
-// position of window
-#define window_X 0
-#define window_Y 0
+struct BufferManager {
+};
 
+struct FileListBuffer {
+};

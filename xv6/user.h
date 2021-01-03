@@ -41,3 +41,12 @@ void* memset(void*, int, uint);
 void* malloc(uint);
 void free(void*);
 int atoi(const char*);
+
+// for message
+enum MSG_TYPE {
+    KEYBOARD = 0,
+    MOUSE_LEFT_PRESS,
+    MOUSE_LEFT_RELEASE,
+    MOUSE_RIGHT_PRESS,
+    MOUSE_RIGHT_RELEASE
+};
