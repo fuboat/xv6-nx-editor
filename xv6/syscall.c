@@ -103,6 +103,7 @@ extern int sys_uptime(void);
 extern int sys_get_msg(void);
 extern int sys_update(void);
 extern int sys_drawarea_short(void);
+extern int sys_addcomand_c(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,

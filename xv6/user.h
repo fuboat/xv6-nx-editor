@@ -41,3 +41,16 @@ void* memset(void*, int, uint);
 void* malloc(uint);
 void free(void*);
 int atoi(const char*);
+
+// for message
+enum MSG_TYPE {
+    KEYBOARD,
+    MOUSE_LEFT_PRESS,
+    MOUSE_LEFT_RELEASE,
+    MOUSE_RIGHT_PRESS,
+    MOUSE_RIGHT_RELEASE
+};
+
+#define DEBUG(...) // printf(2, __VA_ARGS__)
+#define max(a, b) (a) > (b) ? (a) : (b)
+#define min(a, b) (a) < (b) ? (a) : (b)

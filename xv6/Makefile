@@ -177,9 +177,10 @@ UPROGS=\
 	_wc\
 	_zombie\
 	_editor\
+	_Gui\
 
 fs.img: mkfs README $(UPROGS)
-	./mkfs fs.img README $(UPROGS) hankaku.txt
+	./mkfs fs.img README $(UPROGS) hankaku.txt hankaku-test.txt
 
 -include *.d
 

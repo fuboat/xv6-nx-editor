@@ -1,0 +1,779 @@
+#include "types.h"
+#include "stat.h"
+#include "user.h"
+#include "fcntl.h"
+#include "Gui.h"
+#include "init_ascii.h"
+#include "fs.h"
+#include "sh.h"
+
+#define RGB(r,g,b) ((r >> 3) << 11 | (g >> 2) << 5 | (b >> 3))
+#define AREA_ARGS(area) area.x, area.y, area.width, area.height
+
+static void * cursor_focus;
+
+void mouse_pos_transform(struct Area cur_area, int *x, int *y) {
+    *x -= cur_area.x - cur_area.offset_x;
+    *y -= cur_area.y - cur_area.offset_y;
+}
+
+// (x, y) 表示一个相对于当前组件 (0, 0) 的坐标。
+// cur_area 表示子组件的 area。
+// 用于在组件的处理函数处，判断某个坐标是否在子组件的控制范围。
+int is_pos_in_area(struct Area cur_area, int x, int y) {
+    return (x >= cur_area.x && y >= cur_area.y &&
+    x < cur_area.x + cur_area.width &&
+    y < cur_area.y + cur_area.height);
+}
+
+struct Area calc_current_area(struct Area parent_area, struct Area area) {
+    parent_area.x += area.x - parent_area.offset_x;
+    parent_area.y += area.y - parent_area.offset_y;
+    parent_area.width -= area.x - parent_area.offset_x;
+    parent_area.height -= area.y - parent_area.offset_y;
+    if (parent_area.width > area.width) 
+        parent_area.width = area.width;
+    if (parent_area.height > area.height)
+        parent_area.height = area.height;
+    parent_area.offset_x = area.offset_x;
+    parent_area.offset_y = area.offset_y;
+    return parent_area;
+}
+
+/**************************
+ * 
+ * TextEdit handler functions.
+ * 
+ * make, draw, handle mouse, handle keyboard.
+ * 
+ **************************/
+
+void LineEdit_set_str(struct textframe * text, char * str) {
+    for (int i = 0; i < text->maxrow; ++ i) {
+        free(text->data[i]);
+    }
+
+    if (text->data)
+        free(text->data);
+
+    memset(text, 0, sizeof (struct textframe));
+
+    text->data = malloc(sizeof(char*) * 1);
+    text->data[0] = malloc(strlen(str) + 1);
+    strcpy(text->data[0], str);
+    text->maxrow = 1;
+}
+
+int make_TextEdit(struct TextEdit ** pedit, void * parent, char * parent_type) {
+    struct TextEdit * edit = malloc(sizeof(struct TextEdit));
+    edit->area = (struct Area) {0, 0, 100, 16, 0, 0 };
+    edit->parent = parent;
+    edit->parent_type = parent_type;
+
+    edit->text = malloc(sizeof(struct textframe));
+    memset(edit->text, 0, sizeof(struct textframe));
+    LineEdit_set_str(edit->text, "");
+
+    *pedit = edit;
+
+    return 0;
+}
+
+int draw_TextEdit(struct TextEdit *edit, struct Area parent_area) {
+    struct textframe * text = edit->text;
+
+    struct Area area = calc_current_area(parent_area, edit->area);
+
+    DEBUG("[GUI TextEdit] draw line edit, %d %d %d %d\n", area.x, area.y, area.width, area.height);
+
+    // 绘制背景
+    drawrect(AREA_ARGS(area), 59196);
+
+    // 绘制光标
+    /*****
+     * 根据光标调整 offset.
+     *****/
+    struct Area cursor_area;
+
+    // offset 的调整只尝试 10 次。
+
+    if (edit == cursor_focus) {
+        for (int i = 0; i < 10; ++ i) {
+            cursor_area = calc_current_area(
+                area,
+                (struct Area) { text->cursor_col * 8, text->cursor_row * 16, 8, 16, 0, 0 }
+            );
+
+            // 如果光标完全不可见，调整 offset，使得光标恰好在显示区域的最右下侧。
+            if (cursor_area.height <= 0 || cursor_area.width <= 0 || cursor_area.x < 0 || cursor_area.y < 0) {
+                DEBUG("[GUI TextEdit] offset adjust for curser. because: cursor_area(width, height) = (%d,%d)\n", 
+                cursor_area.width, cursor_area.height);
+                edit->area.offset_x = max(0, text->cursor_col * 8 - area.width + 8);
+                edit->area.offset_y = max(0, text->cursor_row * 16 - area.height + 16);
+                area = calc_current_area(parent_area, edit->area);
+                DEBUG("[GUI TextEdit] area change. (%d %d %d %d)\n", area.x, area.y, area.width, area.height);
+            } else {
+                break;
+            }
+        }
+
+        drawrect(
+            AREA_ARGS(cursor_area), 
+            RGB(0xa0, 0xa0, 0xa0)
+        );
+    }
+
+    for (int r = 0; r < text->maxrow; ++ r) {
+        int len = strlen(text->data[r]);
+        for (int col = 0; col < len; ++ col) {
+            // 枚举所有的字符
+            char c = text->data[r][col];
+
+            // 该字符对应在屏幕上的 area
+            struct Area c_area = calc_current_area(area, (struct Area) { col * 8, r * 16, 8, 16, 0, 0 });
+
+            // 只有在能够完整绘制的时候才进行绘制
+            if (c_area.x >= 0 && c_area.y >= 0 && c_area.width == 8 && c_area.height == 16) 
+            {
+                drawarea(
+                    AREA_ARGS(c_area), 
+                    get_text_area(c));
+            }
+        }
+    }
+
+    return 0;
+}
+
+int handle_mouse_TextEdit(struct TextEdit *edit, int x, int y, int mouse_opt) {
+    mouse_pos_transform(edit->area, &x, &y);
+
+    DEBUG("[GUI: TextEdit] mouse in TextEdit, pos = (%d, %d), type = %d\n", x, y, mouse_opt);
+
+    return 0;
+}
+
+#define BACKSPACE   8
+#define ENTER       10
+#define LEFT_ARROW  228
+#define RIGHT_ARROW 229
+#define UP_ARROW    226
+#define DOWN_ARROW  227
+
+int handle_keyboard_TextEdit(struct TextEdit *edit, int c) {
+    struct textframe *text = edit->text;
+
+    switch (c) {
+    case ENTER:
+        new_line_to_editor(text);
+        break;
+
+    case LEFT_ARROW: case BACKSPACE:
+        move_to_previous_char(text);
+
+        if (c == BACKSPACE) {
+            backspace_to_str(text);
+        }
+
+        break;
+
+    case RIGHT_ARROW:
+        move_to_next_char(text);
+        break;
+
+    case UP_ARROW:
+        move_to_last_line(text);
+        break; 
+    case DOWN_ARROW:
+        move_to_next_line(text);
+        break;
+
+    default: {
+        if (32 <= c && c <= 126) {
+            putc_to_str(text, c);
+            move_to_next_char(text);
+        }
+        break;
+    }
+    }
+
+    return 0;
+}
+
+/**************************
+ * 
+ * LineEdit handler functions.
+ * 
+ * make, draw, handle mouse, handle keyboard.
+ * 
+ * 
+ **************************/
+
+int make_LineEdit(struct LineEdit ** pedit, void * parent, char * parent_type) {
+    struct LineEdit * edit = malloc(sizeof(struct LineEdit));
+    edit->area = (struct Area) {0, 0, 100, 16, 0, 0 };
+    edit->parent = parent;
+    edit->parent_type = parent_type;
+
+    edit->text = malloc(sizeof(struct textframe));
+    memset(edit->text, 0, sizeof(struct textframe));
+    LineEdit_set_str(edit->text, "");
+
+    *pedit = edit;
+
+    return 0;
+}
+
+int draw_LineEdit(struct LineEdit *edit, struct Area parent_area) {
+    struct textframe * text = edit->text;
+
+    struct Area area = calc_current_area(parent_area, edit->area);
+
+    DEBUG("[GUI LineEdit] draw line edit, %d %d %d %d\n", area.x, area.y, area.width, area.height);
+
+    // 绘制背景
+    drawrect(AREA_ARGS(area), 59196);
+
+    // 绘制光标
+    /*****
+     * 根据光标调整 offset.
+     *****/
+    struct Area cursor_area;
+
+    // offset 的调整只尝试 10 次。
+
+    if (edit == cursor_focus) {
+        for (int i = 0; i < 10; ++ i) {
+            cursor_area = calc_current_area(
+                area,
+                (struct Area) { text->cursor_col * 8, text->cursor_row * 16, 8, 16, 0, 0 }
+            );
+
+            // 如果光标完全不可见，调整 offset，使得光标恰好在显示区域的最右下侧。
+            if (cursor_area.height <= 0 || cursor_area.width <= 0 || cursor_area.x < 0 || cursor_area.y < 0) {
+                DEBUG("[GUI LineEdit] offset adjust for curser. because: cursor_area(width, height) = (%d,%d)\n", 
+                cursor_area.width, cursor_area.height);
+                edit->area.offset_x = max(0, text->cursor_col * 8 - area.width + 8);
+                edit->area.offset_y = max(0, text->cursor_row * 16 - area.height + 16);
+                area = calc_current_area(parent_area, edit->area);
+                DEBUG("[GUI LineEdit] area change. (%d %d %d %d)\n", area.x, area.y, area.width, area.height);
+            } else {
+                break;
+            }
+        }
+
+        drawrect(
+            AREA_ARGS(cursor_area), 
+            RGB(0xa0, 0xa0, 0xa0)
+        );
+    }
+
+    for (int r = 0; r < text->maxrow; ++ r) {
+        int len = strlen(text->data[r]);
+        for (int col = 0; col < len; ++ col) {
+            // 枚举所有的字符
+            char c = text->data[r][col];
+
+            // 该字符对应在屏幕上的 area
+            struct Area c_area = calc_current_area(area, (struct Area) { col * 8, r * 16, 8, 16, 0, 0 });
+
+            // 只有在能够完整绘制的时候才进行绘制
+            if (c_area.x >= 0 && c_area.y >= 0 && c_area.width == 8 && c_area.height == 16) 
+            {
+                drawarea(
+                    AREA_ARGS(c_area), 
+                    get_text_area(c));
+            }
+        }
+    }
+
+    return 0;
+}
+
+int handle_mouse_LineEdit(struct LineEdit *edit, int x, int y, int mouse_opt) {
+    mouse_pos_transform(edit->area, &x, &y);
+
+    DEBUG("[GUI: LineEdit] mouse in LineEdit, pos = (%d, %d), type = %d\n", x, y, mouse_opt);
+
+    return 0;
+}
+
+int handle_keyboard_LineEdit(struct LineEdit *edit, int c) {
+    struct textframe *text = edit->text;
+
+    switch (c) {
+    // case ENTER:
+    //     new_line_to_editor(&text);
+    //     break;
+
+    case LEFT_ARROW: case BACKSPACE:
+        move_to_previous_char(text);
+
+        if (c == BACKSPACE) {
+            backspace_to_str(text);
+        }
+
+        break;
+
+    case RIGHT_ARROW:
+        move_to_next_char(text);
+        break;
+
+    // case UP_ARROW:
+    //     move_to_last_line(&text);
+    //     break; 
+    // case DOWN_ARROW:
+    //     move_to_next_line(&text);
+    //     break;
+
+    default: {
+        if (32 <= c && c <= 126) {
+            putc_to_str(text, c);
+            move_to_next_char(text);
+        }
+        break;
+    }
+    }
+
+    return 0;
+}
+
+/**************************
+ * 
+ * FileListBuffer handler functions.
+ * make, draw, handle mouse, handle keyboard.
+ * 
+ * 
+ **************************/
+
+int make_FileListBuffer(struct FileListBuffer ** pbuffer, struct BufferManager * parent) {
+    struct FileListBuffer * buffer = malloc(sizeof (struct FileListBuffer));
+    buffer->area = (struct Area) { 10, 100, 150, 500, 0, 0 };
+    buffer->n_files = 0;
+    buffer->files = malloc(sizeof(struct FileNameControl *) * 0);
+    buffer->file_selected = 0;
+    buffer->parent = parent;
+
+    buffer->path[0] = '\0';
+
+    *pbuffer = buffer;
+
+    FileListBuffer_update_FileList(buffer);
+
+    return 0;
+}
+
+int draw_FileListBuffer(struct FileListBuffer * buffer, struct Area area) {
+    area = calc_current_area(area, buffer->area);
+
+    for (int i = 0; i < buffer->n_files; ++ i) {
+        draw_FileNameControl(buffer->files[i], area);
+    }
+
+    return 0;
+}
+
+int handle_mouse_FileListBuffer(struct FileListBuffer * buffer, int x, int y, int mouse_opt) {
+    mouse_pos_transform(buffer->area, &x, &y);
+
+    for (int i = 0; i < buffer->n_files; ++ i) {
+        if (is_pos_in_area(buffer->files[i]->area, x, y)) {
+            cursor_focus = buffer->files[i]->edit;
+            buffer->file_selected = buffer->files[i];
+            if (mouse_opt == MOUSE_LEFT_PRESS)
+                FileSwitchBar_open_file(buffer->parent->fileSwitch, buffer->files[i]->edit->text->data[0]);
+            return handle_mouse_FileNameControl(buffer->files[i], x, y, mouse_opt);
+        }
+    }
+
+    return 0;
+}
+
+int handle_keyboard_FileListBuffer(struct FileListBuffer* buffer, int c) {
+    if (buffer->file_selected) {
+        return handle_keyboard_FileNameControl(buffer->file_selected, c);
+    } else {
+        return 0;
+    }
+}
+
+char*
+fmtname(char *path)
+{
+  static char buf[DIRSIZ+1];
+  char *p;
+  
+  // Find first character after last slash.
+  for(p=path+strlen(path); p >= path && *p != '/'; p--)
+    ;
+  p++;
+  
+  // Return blank-padded name.
+  if(strlen(p) >= DIRSIZ)
+    return p;
+  memmove(buf, p, strlen(p));
+  memset(buf+strlen(p), '\0', DIRSIZ-strlen(p));
+  return buf;
+}
+
+int FileListBuffer_update_FileList(struct FileListBuffer * buffer) {
+    char * path = buffer->path;
+    char buf[512];
+
+    int fd = open(path, 0);
+    struct stat st;
+    struct dirent de;
+
+    fstat(fd, &st);
+
+    // 计算目录中有多少个项。
+
+    int n_files = 0;
+
+    if (st.type == T_DIR) {
+        strcpy(buf, path);
+        char * p = buf + strlen(buf);
+        *p ++ = '/';
+        while(read(fd, &de, sizeof(de)) == sizeof(de)){
+            if(de.inum == 0)
+                continue;
+            memmove(p, de.name, DIRSIZ);
+            p[DIRSIZ] = 0;
+            if(stat(buf, &st) >= 0) {
+                ++ n_files;
+            }
+        }
+    }
+
+    buffer->n_files = n_files;
+    buffer->files = malloc(sizeof(struct FileNameControl *) * n_files);
+
+    DEBUG("----- [GUI FileListBuffer] nfiles = %d -----\n", n_files);
+
+    close(fd); 
+    fd = open(path, 0); 
+    fstat(fd, &st);
+
+    int file_index = 0;
+
+    if (st.type == T_DIR) {
+        strcpy(buf, path);
+        char * p = buf + strlen(buf);
+        *p ++ = '/';
+        while(read(fd, &de, sizeof(de)) == sizeof(de)){
+            if(de.inum == 0)
+                continue;
+            memmove(p, de.name, DIRSIZ);
+            p[DIRSIZ] = 0;
+            if(stat(buf, &st) >= 0) {
+                make_FileNameControl(buffer->files + file_index, buffer);
+                struct FileNameControl * file = buffer->files[file_index];
+                file->area.y = file_index * 16;
+                strcpy(file->oldName, fmtname(buf)); 
+                LineEdit_set_str(file->edit->text, file->oldName);
+                DEBUG("[GUI FileListBuffer] file: %s\n", file->oldName);
+                ++ file_index;
+            }
+        }
+    }
+
+    close(fd);
+
+    return 0;
+}
+
+/**************************
+ * 
+ * FileNameControl handler functions.
+ * 
+ **************************/
+
+int make_FileNameControl(struct FileNameControl ** pcontrol, struct FileListBuffer * parent) {
+    struct FileNameControl * control = malloc(sizeof (struct FileNameControl));
+    memset(control, 0, sizeof(struct FileNameControl));
+    make_LineEdit(& control->edit, control, "FileNameControl");
+    control->oldName[0] = 0;
+    control->parent = parent;
+    control->area = (struct Area) {0, 0, 100, 16, 0, 0 };;
+
+    *pcontrol = control;
+
+    return 0;
+}
+
+int draw_FileNameControl(struct FileNameControl * control, struct Area area) {
+    area = calc_current_area(area, control->area);
+
+    DEBUG("[GUI FileNameControl] drawing. area (x, y, width, height) = (%d %d %d %d)\n",
+    area.x,
+    area.y,
+    area.width,
+    area.height);
+
+    return draw_LineEdit(control->edit, area);
+}
+
+int handle_mouse_FileNameControl(struct FileNameControl * control, int x, int y, int mouse_opt) {
+    return handle_mouse_LineEdit(control->edit, x, y, mouse_opt);
+}
+
+int handle_keyboard_FileNameControl(struct FileNameControl * control, int c) {
+    return handle_keyboard_LineEdit(control->edit, c);
+}
+
+/**************************
+ * 
+ * CommandBuffer handler functions.
+ * 
+ **************************/
+
+int make_FileBuffer(struct FileBuffer ** pbuffer, struct FileSwitchBar * parent) {
+    struct FileBuffer * buffer = malloc(sizeof(struct FileBuffer));
+    memset(buffer, 0, sizeof(struct FileBuffer));
+
+    buffer->area = (struct Area) { 0, 20, 700, 200, 0, 0 };
+    make_TextEdit(& buffer->edit, buffer, "FileBuffer");
+    buffer->parent = parent;
+    buffer->edit->area = (struct Area) { 0, 0, 700, 200, 0, 0 };
+    
+    memset(buffer->filepathname, 0, sizeof(buffer->filepathname));
+
+    *pbuffer = buffer;
+
+    return 0;
+}
+
+int draw_FileBuffer(struct FileBuffer * buffer, struct Area area) {
+    area = calc_current_area(area, buffer->area);
+    return draw_TextEdit(buffer->edit, area);
+}
+
+int FileBuffer_open_file(struct FileBuffer * buffer, char * filepathname) {
+    strcpy(buffer->filepathname, filepathname);
+    // textframe_write(buffer->edit->text, "1.txt");
+    textframe_read(buffer->edit->text, filepathname);
+    return 0;
+}
+
+/**************************
+ * 
+ * BufferManager handler functions.
+ * 
+ * make, draw, handle mouse, handle keyboard.
+ * 
+ * 
+ **************************/
+
+int make_BufferManager(struct BufferManager ** pmanager) {
+    struct BufferManager * manager = malloc(sizeof(struct BufferManager));
+    manager->area = (struct Area) { 0, 0, 800, 600, 0, 0 };
+    make_FileListBuffer(& manager->fileList, manager);
+    // manager->file = 0;
+    // make_FileBuffer(& manager->file, manager);
+    make_FileSwitchBar(& manager->fileSwitch, manager);
+    *pmanager = manager;
+    return 0;
+}
+
+int draw_BufferManager(struct BufferManager * manager, struct Area area) {
+    DEBUG("----- Start draw BufferManager. -----\n");
+    area = calc_current_area(area, manager->area);
+    drawrect(AREA_ARGS(area), RGB(255, 255, 255));
+    draw_FileListBuffer(manager->fileList, area);
+    // draw_FileBuffer(manager->file, area);
+    draw_FileSwitchBar(manager->fileSwitch, area);
+    return 0;
+}
+
+int handle_mouse_BufferManager(struct BufferManager* manager, int x, int y, int mouse_opt) {
+    // 校正鼠标在当前部件的显示位置。
+    mouse_pos_transform(manager->area, &x, &y);
+
+    DEBUG("[GUI: BufferManager] mouse in BufferManager, pos = (%d, %d), type = %d\n", x, y, mouse_opt);
+
+    if (is_pos_in_area(manager->fileList->area, x, y)) {
+        return handle_mouse_FileListBuffer(manager->fileList, x, y, mouse_opt);
+    } else if (is_pos_in_area(manager->fileSwitch->area, x, y)) {
+        return handle_mouse_FileSwitchBar(manager->fileSwitch, x, y, mouse_opt);
+    } else {
+        return 0;
+    }
+}
+
+int handle_keyboard_BufferManager(struct BufferManager * manager, int c) {
+    return handle_keyboard_FileListBuffer(manager->fileList, c);
+}
+
+/*********************
+ * 
+ * Button handle function.
+ * 
+ *********************/
+
+int make_Button(struct Button ** pbutton, void * parent, char * parent_type) {
+    struct Button * button;
+    
+    button = malloc(sizeof(struct Button));
+    button->area = (struct Area) { 0, 0, 100, 20, 0, 0 };
+    make_LineEdit(& button->edit, button, "Button");
+    button->parent = parent;
+    button->parent_type = parent_type;
+
+    button->exec = 0;
+
+    *pbutton = button;
+
+    return 0;
+}
+
+int draw_Button(struct Button * button, struct Area area) {
+    area = calc_current_area(area, button->area);
+
+    return draw_LineEdit(button->edit, area);
+}
+
+int handle_mouse_Button(struct Button * button, int x, int y, int mouse_opt) {
+
+    if (mouse_opt == MOUSE_LEFT_PRESS && button->exec) {
+        button->exec(button);
+        return 0;
+    } else {
+        return 0;
+    }
+}
+
+int Button_exec_switch_to_file(struct Button * button) {
+    struct FileSwitchBar * fileswitch = (struct FileSwitchBar *) button->parent;
+    for (int i = 0; i < fileswitch->n_files; ++ i) {
+        if (fileswitch->buttons[i] == button) {
+            fileswitch->current = fileswitch->files[i];
+            return 0;
+        }
+    }
+    return -1;
+}
+
+/*********************
+ * 
+ * FileSwitchBar handle function.
+ * 
+ *********************/
+
+int make_FileSwitchBar(struct FileSwitchBar **pfileSwitch, struct BufferManager * parent) {
+    struct FileSwitchBar * fileSwitch = malloc(sizeof(struct FileSwitchBar));
+    
+    fileSwitch->area = (struct Area) { 100, 10, 700, 400, 0, 0 };
+
+    memset(fileSwitch->buttons, 0, sizeof(fileSwitch->buttons));
+    memset(fileSwitch->files, 0, sizeof(fileSwitch->files));
+
+    fileSwitch->n_files = 0;
+    fileSwitch->current = 0;
+    fileSwitch->parent = parent;
+
+    *pfileSwitch = fileSwitch;
+
+    return 0;
+}
+
+int draw_FileSwitchBar(struct FileSwitchBar * fileSwitch, struct Area area) {
+    area = calc_current_area(area, fileSwitch->area);
+    int x = 0;
+
+    for (int i = 0; i < fileSwitch->n_files; ++ i) {
+        struct Button * cur_button = fileSwitch->buttons[i];
+        cur_button->area.x = x;
+        draw_Button(cur_button, area);
+        x += cur_button->area.width;
+    }
+
+    if (fileSwitch->current) {
+        draw_FileBuffer(fileSwitch->current, area);
+    }
+
+    return 0;
+}
+
+int handle_mouse_FileSwitchBar(struct FileSwitchBar * fileSwitch, int x, int y, int mouse_opt) {
+    mouse_pos_transform(fileSwitch->area, &x, &y);
+
+    if (mouse_opt == MOUSE_LEFT_PRESS) {
+        for (int i = 0; i < fileSwitch->n_files; ++ i) {
+            struct Button * cur_button = fileSwitch->buttons[i];
+            if (is_pos_in_area(cur_button->area, x, y)) {
+                handle_mouse_Button(cur_button, x, y, mouse_opt);
+            }
+        }
+        return 0;
+    } else {
+        return 0;
+    }
+}
+
+int FileSwitchBar_open_file(struct FileSwitchBar * fileSwitch, char * filename) {
+    if (fileSwitch->n_files < FILESWITCH_MAX_FILES) {
+        make_Button(fileSwitch->buttons + fileSwitch->n_files, fileSwitch, "FileSwitchBar");
+        fileSwitch->buttons[fileSwitch->n_files]->exec = Button_exec_switch_to_file;
+        make_FileBuffer(fileSwitch->files + fileSwitch->n_files, fileSwitch);
+        LineEdit_set_str(fileSwitch->buttons[fileSwitch->n_files]->edit->text, filename);
+        FileBuffer_open_file(fileSwitch->files[fileSwitch->n_files], filename);
+        fileSwitch->current = fileSwitch->files[fileSwitch->n_files];
+        fileSwitch->n_files ++;
+        return 0;
+    } else {
+        return -1;
+    }
+}
+
+/*********************
+ * 
+ * Main function. 
+ * 
+ *********************/
+
+int main() {
+    struct BufferManager *manager;
+
+    make_BufferManager(& manager);
+
+    DEBUG("----- [GUI] BUffer Manager Init Finished. -----\n");
+
+    char_point_init();
+
+    int msg = get_msg();
+
+    while (1) {
+        int type = msg >> 24;
+        int x = msg >> 12 & 0xfff;
+        int y = msg & 0xfff;
+
+        switch (type)
+        {
+        case MOUSE_LEFT_PRESS: 
+        case MOUSE_LEFT_RELEASE:
+        case MOUSE_RIGHT_PRESS:
+        case MOUSE_RIGHT_RELEASE:
+            DEBUG("[GUI] mouse message get. type = %d\n", type);
+            handle_mouse_BufferManager(manager, x, y, type);
+            break;
+
+        case KEYBOARD:
+            handle_keyboard_BufferManager(manager, msg & 0xffffff);
+            break;
+
+        default:
+            break;
+        }
+
+        msg = get_msg();
+
+        if (msg == 0) {
+            draw_BufferManager(manager, (struct Area) {0, 0, 800, 600, 0, 0});
+            update();
+            
+            do {
+                msg = get_msg();
+            } while (!msg);
+        }
+    }
+}

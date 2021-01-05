@@ -31,8 +31,8 @@ int main(void)
       exit();
     }
     if(pid == 0){
-      exec("editor", argv);
-      printf(1, "init: exec editor failed\n");
+      exec("Gui", argv);
+      printf(1, "init: exec Gui failed\n");
       exit();
     }
     while ((wpid = wait()) >= 0 && wpid != pid)

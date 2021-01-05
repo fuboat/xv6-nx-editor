@@ -1,9 +1,13 @@
 #define ROWSIZE 1024
 #define MAXROW 512
-#include "textframe.h"
 #include "types.h"
 #include "user.h"
 #include "fcntl.h"
+#include "textframe.h"
+
+#define printf(...)
+
+struct textframe * command_textframe;
 
 //字符串连接
 char *strcat(char *str1, char *str2, int len1, int len2)
@@ -529,3 +533,95 @@ struct textframe *textframe_insert(struct textframe *text, struct textframe *in_
 //     std::cout << "write filename=>" << filename << std::endl;
 //     t = textframe_write(text, filename);
 // }
+
+void putc_to_str(struct textframe * text, int ch) {
+    char **s = &(text->data[text->cursor_row]);
+    int len = strlen(*s);
+    char *new_s = (char*) malloc(len + 2);
+    memmove(new_s, *s, len);
+    for (int i = len + 1; i > text->cursor_col; -- i)
+        new_s[i] = new_s[i - 1];
+    new_s[text->cursor_col] = ch;
+    new_s[len+1] = 0;
+    free(*s);
+    *s = new_s;
+}
+
+void backspace_to_str(struct textframe * text) {
+    char **s = &(text->data[text->cursor_row]);
+    int p = text->cursor_col;
+    int len = strlen(*s);
+    int i;
+    for (i = p; i < len; ++ i)
+        (*s)[i] = (*s)[i + 1];
+}
+
+void move_to_next_char(struct textframe * text) {
+    int len = strlen(text->data[text->cursor_row]);
+    if (text->cursor_col < len)
+        ++ text->cursor_col;
+    else if (text->cursor_row + 1 < text->maxrow) {
+        ++ text->cursor_row;
+        text->cursor_col = 0;
+    }
+}
+
+void move_to_previous_char(struct textframe * text) {
+    if (text->cursor_col > 0)
+        -- text->cursor_col;
+    else if (text->cursor_row > 0)
+    {
+        -- text->cursor_row;
+        text->cursor_col = strlen(text->data[text->cursor_row]);
+    }
+}
+
+void move_to_next_line(struct textframe * text) {
+    if (text->cursor_row + 1 < text->maxrow) {
+        ++ text->cursor_row;
+    }
+
+    int len = strlen(text->data[text->cursor_row]);
+    if (text->cursor_col > len) {
+        text->cursor_col = len;
+    }
+}
+
+void move_to_last_line(struct textframe * text) {
+    if (text->cursor_row > 0) {
+        -- text->cursor_row;
+    }
+
+    int len = strlen(text->data[text->cursor_row]);
+    if (text->cursor_col > len) {
+        text->cursor_col = len;
+    }
+}
+
+void new_line_to_editor(struct textframe * text) {
+    int len = text->maxrow;
+    char ** new_data = malloc(sizeof(char*) * (len + 1));
+    memmove(new_data, text->data, sizeof(char*) * len);
+
+    for (int r = len; r > text->cursor_row + 1; -- r) {
+        new_data[r] = new_data[r - 1];
+    }
+    new_data[text->cursor_row + 1] = malloc(1);
+    new_data[text->cursor_row + 1][0] = '\0';
+
+    text->data = new_data;
+    text->maxrow = len + 1;
+
+    move_to_next_line(text);
+}
+
+void move_to_pos(struct textframe * text, int r, int c) {
+    if (r >= text->maxrow) r = text->maxrow - 1;
+    if (r >= 0 && c > strlen(text->data[r])) c = strlen(text->data[r]);
+    text->cursor_row = r;
+    text->cursor_col = c;
+}
+
+void move_to_end(struct textframe * text) {
+    move_to_pos(text, 0x7fffffff, 0x7fffffff);
+}

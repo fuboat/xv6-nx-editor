@@ -10,8 +10,12 @@
 
 void refresh(struct textframe *text) {
     int beginx = 236, beginy = 55;
+
+    // 绘制背景
     drawarea_short(0, 0, 800, 600, background);
     printf(1, "text->cursor_row = %d, text->cursor_col = %d\n", text->cursor_row, text->cursor_col);
+
+    // 绘制光标
     drawrect(beginx + text->cursor_col * 8, beginy + text->cursor_row * 16, 8, 16, RGB(0xa0, 0xa0, 0xa0));
     for (int r = 0; r < text->maxrow; ++ r) {
         int len = strlen(text->data[r]), col;
@@ -20,87 +24,6 @@ void refresh(struct textframe *text) {
         }
     }
     update();
-}
-
-void putc_to_str(struct textframe * text, int ch) {
-    char **s = &(text->data[text->cursor_row]);
-    int len = strlen(*s);
-    char *new_s = (char*) malloc(len + 2);
-    memmove(new_s, *s, len);
-    for (int i = len + 1; i > text->cursor_col; -- i)
-        new_s[i] = new_s[i - 1];
-    new_s[text->cursor_col] = ch;
-    new_s[len+1] = 0;
-    free(*s);
-    *s = new_s;
-}
-
-void backspace_to_str(struct textframe * text) {
-    char **s = &(text->data[text->cursor_row]);
-    int p = text->cursor_col;
-    int len = strlen(*s);
-    int i;
-    for (i = p; i < len; ++ i)
-        (*s)[i] = (*s)[i + 1];
-}
-
-void move_to_next_char(struct textframe * text) {
-    int len = strlen(text->data[text->cursor_row]);
-    if (text->cursor_col < len)
-        ++ text->cursor_col;
-    else if (text->cursor_row + 1 < text->maxrow) {
-        ++ text->cursor_row;
-        text->cursor_col = 0;
-    }
-}
-
-void move_to_last_char(struct textframe * text) {
-    if (text->cursor_col > 0)
-        -- text->cursor_col;
-    else if (text->cursor_row > 0)
-    {
-        -- text->cursor_row;
-        text->cursor_col = strlen(text->data[text->cursor_row]);
-    }
-}
-
-void move_to_next_line(struct textframe * text) {
-    if (text->cursor_row + 1 < text->maxrow) {
-        ++ text->cursor_row;
-    }
-
-    int len = strlen(text->data[text->cursor_row]);
-    if (text->cursor_col > len) {
-        text->cursor_col = len;
-    }
-}
-
-void move_to_last_line(struct textframe * text) {
-    if (text->cursor_row > 0) {
-        -- text->cursor_row;
-    }
-
-    int len = strlen(text->data[text->cursor_row]);
-    if (text->cursor_col > len) {
-        text->cursor_col = len;
-    }
-}
-
-void new_line_to_editor(struct textframe * text) {
-    int len = text->maxrow;
-    char ** new_data = malloc(sizeof(char*) * (len + 1));
-    memmove(new_data, text->data, sizeof(char*) * len);
-
-    for (int r = len; r > text->cursor_row + 1; -- r) {
-        new_data[r] = new_data[r - 1];
-    }
-    new_data[text->cursor_row + 1] = malloc(1);
-    new_data[text->cursor_row + 1][0] = '\0';
-
-    text->data = new_data;
-    text->maxrow = len + 1;
-
-    move_to_next_line(text);
 }
 
 #define BACKSPACE   8
@@ -156,7 +79,7 @@ int main() {
 
     while (1) {
         int c = get_msg();
-        int len;
+        // int len;
 
         if (c != 0) {
             printf(1, "kbd num = %d, c = %c\n", c, c);
@@ -168,7 +91,7 @@ int main() {
                 break;
 
             case LEFT_ARROW: case BACKSPACE:
-                move_to_last_char(&text);
+                move_to_previous_char(&text);
 
                 if (c == BACKSPACE) {
                     backspace_to_str(&text);
@@ -186,10 +109,13 @@ int main() {
             case DOWN_ARROW:
                 move_to_next_line(&text);
                 break;
-            default:
-                putc_to_str(&text, c);
-                move_to_next_char(&text);
+            default: {
+                if (32 <= c && c <= 126) {
+                    putc_to_str(&text, c);
+                    move_to_next_char(&text);
+                }
                 break;
+            }
             }
 
             refresh(&text);

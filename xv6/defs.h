@@ -182,7 +182,16 @@ int             copyout(pde_t*, uint, void*, uint);
 void            clearpteu(pde_t *pgdir, char *uva);
 
 // sys_get_msg.c
+enum MSG_TYPE {
+    KEYBOARD = 0,
+    MOUSE_LEFT_PRESS,
+    MOUSE_LEFT_RELEASE,
+    MOUSE_RIGHT_PRESS,
+    MOUSE_RIGHT_RELEASE
+};
+
 void            add_kbd_msg(int c);
+void            add_mouse_msg(enum MSG_TYPE mouse_opt, int x, int y);
 
 // for gui
 int             drawrect(const int xl, const int yl, const int width, const int height, int color);
@@ -190,7 +199,6 @@ int             drawarea(const int xl, const int yl, const int width, const int 
 void            update();
 void            update_area(int xl, int yl, int width, int height);
 int             drawrect_force(const int xl, const int yl, const int width, const int height, int color);
-
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

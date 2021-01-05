@@ -1,11 +1,23 @@
 #include "types.h"
 #include "stat.h"
 #include "user.h"
+#include "textframe.h"
 
 static void
 putc(int fd, char c)
 {
   write(fd, &c, 1);
+  if ((fd == 1 || fd == 2) && command_textframe) {
+    // move_to_end(command_textframe);
+    if (c == '\n') {
+      new_line_to_editor(command_textframe);
+      move_to_next_line(command_textframe);
+    } else {
+      putc_to_str(command_textframe, c);
+      move_to_next_char(command_textframe);
+    }
+    // move_to_end(command_textframe);
+  }
 }
 
 static void
