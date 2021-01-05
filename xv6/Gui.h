@@ -51,6 +51,8 @@ struct BufferManager {
     struct Area area;
     struct FileListBuffer * fileList;
     struct FileSwitchBar * fileSwitch;
+
+    void * focus;
 };
 
 struct FileBuffer {
@@ -110,6 +112,8 @@ int handle_keyboard_FileNameControl(struct FileNameControl*, int c);
 
 int make_FileBuffer(struct FileBuffer **, struct FileSwitchBar * parent);
 int draw_FileBuffer(struct FileBuffer *, struct Area area);
+int handle_mouse_FileBuffer(struct FileBuffer *, int x, int y, int mouse_opt);
+int handle_keyboard_FileBuffer(struct FileBuffer *, int c);
 
 int make_BufferManager(struct BufferManager **);
 int draw_BufferManager(struct BufferManager *, struct Area area);
@@ -123,4 +127,5 @@ int handle_mouse_Button(struct Button *, int x, int y, int mouse_opt);
 int make_FileSwitchBar(struct FileSwitchBar **, struct BufferManager * parent);
 int draw_FileSwitchBar(struct FileSwitchBar *, struct Area area);
 int handle_mouse_FileSwitchBar(struct FileSwitchBar *, int x, int y, int mouse_opt);
+int handle_keyboard_FileSwitchBar(struct FileSwitchBar *, int c);
 int FileSwitchBar_open_file(struct FileSwitchBar * fileSwitch, char * filename);

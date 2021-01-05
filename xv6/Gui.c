@@ -33,6 +33,10 @@ struct Area calc_current_area(struct Area parent_area, struct Area area) {
     parent_area.height -= area.y - parent_area.offset_y;
     if (parent_area.width > area.width) 
         parent_area.width = area.width;
+    if (area.x - parent_area.offset_x < 0)
+        parent_area.width = 0;
+    if (area.y - parent_area.offset_y < 0)
+        parent_area.height = 0;
     if (parent_area.height > area.height)
         parent_area.height = area.height;
     parent_area.offset_x = area.offset_x;
@@ -84,7 +88,7 @@ int draw_TextEdit(struct TextEdit *edit, struct Area parent_area) {
 
     struct Area area = calc_current_area(parent_area, edit->area);
 
-    DEBUG("[GUI TextEdit] draw line edit, %d %d %d %d\n", area.x, area.y, area.width, area.height);
+    DEBUG("[GUI TextEdit] draw text edit, %d %d %d %d (offset x y) = (%d %d)\n", area.x, area.y, area.width, area.height, area.offset_x, area.offset_y);
 
     // 绘制背景
     drawrect(AREA_ARGS(area), 59196);
@@ -147,6 +151,8 @@ int draw_TextEdit(struct TextEdit *edit, struct Area parent_area) {
 
 int handle_mouse_TextEdit(struct TextEdit *edit, int x, int y, int mouse_opt) {
     mouse_pos_transform(edit->area, &x, &y);
+
+    cursor_focus = edit;
 
     DEBUG("[GUI: TextEdit] mouse in TextEdit, pos = (%d, %d), type = %d\n", x, y, mouse_opt);
 
@@ -241,7 +247,7 @@ int draw_LineEdit(struct LineEdit *edit, struct Area parent_area) {
     struct Area cursor_area;
 
     // offset 的调整只尝试 10 次。
-
+    // 只有在焦点在当前编辑框中时，才尝试绘制光标
     if (edit == cursor_focus) {
         for (int i = 0; i < 10; ++ i) {
             cursor_area = calc_current_area(
@@ -292,6 +298,8 @@ int draw_LineEdit(struct LineEdit *edit, struct Area parent_area) {
 
 int handle_mouse_LineEdit(struct LineEdit *edit, int x, int y, int mouse_opt) {
     mouse_pos_transform(edit->area, &x, &y);
+
+    cursor_focus = edit;
 
     DEBUG("[GUI: LineEdit] mouse in LineEdit, pos = (%d, %d), type = %d\n", x, y, mouse_opt);
 
@@ -378,7 +386,6 @@ int handle_mouse_FileListBuffer(struct FileListBuffer * buffer, int x, int y, in
 
     for (int i = 0; i < buffer->n_files; ++ i) {
         if (is_pos_in_area(buffer->files[i]->area, x, y)) {
-            cursor_focus = buffer->files[i]->edit;
             buffer->file_selected = buffer->files[i];
             if (mouse_opt == MOUSE_LEFT_PRESS)
                 FileSwitchBar_open_file(buffer->parent->fileSwitch, buffer->files[i]->edit->text->data[0]);
@@ -548,6 +555,22 @@ int draw_FileBuffer(struct FileBuffer * buffer, struct Area area) {
     return draw_TextEdit(buffer->edit, area);
 }
 
+int handle_mouse_FileBuffer(struct FileBuffer * buffer, int x, int y, int mouse_opt) {
+    mouse_pos_transform(buffer->area, &x, &y);
+    return handle_mouse_TextEdit(buffer->edit, x, y, mouse_opt);
+}
+
+int handle_keyboard_FileBuffer(struct FileBuffer * buffer, int c) {
+    switch (c)
+    {
+    // TODO: 一些针对文件的快捷键的拦截，例如 Ctrl + S
+
+    default:
+        return handle_keyboard_TextEdit(buffer->edit, c);
+        break;
+    }
+}
+
 int FileBuffer_open_file(struct FileBuffer * buffer, char * filepathname) {
     strcpy(buffer->filepathname, filepathname);
     // textframe_write(buffer->edit->text, "1.txt");
@@ -571,6 +594,7 @@ int make_BufferManager(struct BufferManager ** pmanager) {
     // manager->file = 0;
     // make_FileBuffer(& manager->file, manager);
     make_FileSwitchBar(& manager->fileSwitch, manager);
+    manager->focus = 0;
     *pmanager = manager;
     return 0;
 }
@@ -592,16 +616,24 @@ int handle_mouse_BufferManager(struct BufferManager* manager, int x, int y, int 
     DEBUG("[GUI: BufferManager] mouse in BufferManager, pos = (%d, %d), type = %d\n", x, y, mouse_opt);
 
     if (is_pos_in_area(manager->fileList->area, x, y)) {
-        return handle_mouse_FileListBuffer(manager->fileList, x, y, mouse_opt);
+        // 如果点击了子部件，那么，焦点设在子部件上。
+        return handle_mouse_FileListBuffer(manager->focus=manager->fileList, x, y, mouse_opt);
     } else if (is_pos_in_area(manager->fileSwitch->area, x, y)) {
-        return handle_mouse_FileSwitchBar(manager->fileSwitch, x, y, mouse_opt);
+        return handle_mouse_FileSwitchBar(manager->focus=manager->fileSwitch, x, y, mouse_opt);
     } else {
         return 0;
     }
 }
 
 int handle_keyboard_BufferManager(struct BufferManager * manager, int c) {
-    return handle_keyboard_FileListBuffer(manager->fileList, c);
+    // 根据焦点判断由哪一部件接收键盘输入
+    if (manager->focus == manager->fileList)
+        return handle_keyboard_FileListBuffer(manager->fileList, c);
+    else if (manager->focus == manager->fileSwitch) {
+        return handle_keyboard_FileSwitchBar(manager->fileSwitch, c);
+    }  else {
+        return 0;
+    }
 }
 
 /*********************
@@ -701,13 +733,31 @@ int handle_mouse_FileSwitchBar(struct FileSwitchBar * fileSwitch, int x, int y, 
         for (int i = 0; i < fileSwitch->n_files; ++ i) {
             struct Button * cur_button = fileSwitch->buttons[i];
             if (is_pos_in_area(cur_button->area, x, y)) {
-                handle_mouse_Button(cur_button, x, y, mouse_opt);
+                return handle_mouse_Button(cur_button, x, y, mouse_opt);
             }
         }
-        return 0;
-    } else {
-        return 0;
     }
+
+    if (fileSwitch->current && 
+    is_pos_in_area(fileSwitch->current->area, x, y)) {
+        return handle_mouse_FileBuffer(fileSwitch->current, x, y, mouse_opt);
+    }
+
+    return 0;
+}
+
+int handle_keyboard_FileSwitchBar(struct FileSwitchBar * fileSwitch, int c) {
+    switch (c)
+    {
+        // TODO: 一些快捷键的接收，例如 Alt+Tab 切换标签页
+    
+    default:
+        if (fileSwitch->current)
+            return handle_keyboard_FileBuffer(fileSwitch->current, c);
+        break;
+    }
+
+    return 0;
 }
 
 int FileSwitchBar_open_file(struct FileSwitchBar * fileSwitch, char * filename) {
