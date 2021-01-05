@@ -6,6 +6,7 @@ struct textframe
     int cursor_row; //光标所在行
     int cursor_col; //光标所在列
     int maxrow;     //文件行总数
+    int maxrow_capacity; // data 作为一个 char * 数组可以存储的量
 };
 
 char *substr(char *src, int start_index, int len);
@@ -24,5 +25,6 @@ void move_to_next_line(struct textframe * text);
 void move_to_last_line(struct textframe * text);
 void new_line_to_editor(struct textframe * text);
 void move_to_end(struct textframe * text);
+void LineEdit_set_str(struct textframe * text, char * str);
 
 extern struct textframe * command_textframe;

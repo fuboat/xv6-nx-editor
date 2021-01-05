@@ -52,22 +52,6 @@ struct Area calc_current_area(struct Area parent_area, struct Area area) {
  * 
  **************************/
 
-void LineEdit_set_str(struct textframe * text, char * str) {
-    for (int i = 0; i < text->maxrow; ++ i) {
-        free(text->data[i]);
-    }
-
-    if (text->data)
-        free(text->data);
-
-    memset(text, 0, sizeof (struct textframe));
-
-    text->data = malloc(sizeof(char*) * 1);
-    text->data[0] = malloc(strlen(str) + 1);
-    strcpy(text->data[0], str);
-    text->maxrow = 1;
-}
-
 int make_TextEdit(struct TextEdit ** pedit, void * parent, char * parent_type) {
     struct TextEdit * edit = malloc(sizeof(struct TextEdit));
     edit->area = (struct Area) {0, 0, 100, 16, 0, 0 };
