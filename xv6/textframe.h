@@ -12,3 +12,13 @@ char *substr(char *src, int start_index, int len);
 char *strcat(char *str1, char *str2, int len1, int len2);
 int textframe_read(struct textframe *text, char *filename);
 int textframe_write(struct textframe *text, char *filename);
+void putc_to_str(struct textframe * text, int ch);
+void backspace_to_str(struct textframe * text);
+void move_to_next_char(struct textframe * text);
+void move_to_previous_char(struct textframe * text);
+void move_to_next_line(struct textframe * text);
+void move_to_last_line(struct textframe * text);
+void new_line_to_editor(struct textframe * text);
+void move_to_end(struct textframe * text);
+
+extern struct textframe * command_textframe;

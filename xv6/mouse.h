@@ -1,0 +1,1 @@
+void get_mouse_pos(int * x, int * y);

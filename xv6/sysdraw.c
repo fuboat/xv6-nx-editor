@@ -3,6 +3,7 @@
 #include "x86.h"
 #include "defs.h"
 #include "param.h"
+#include "mouse.h"
 
 #define SCREEN_HEIGHT_EXPECT 600
 #define SCREEN_WIDTH_EXPECT  800
@@ -11,6 +12,11 @@ ushort VESA_TEMP[SCREEN_WIDTH_EXPECT * SCREEN_HEIGHT_EXPECT];
 
 void update() {
     memmove(VESA_ADDR, VESA_TEMP, sizeof (ushort) * SCREEN_WIDTH_EXPECT * SCREEN_WIDTH_EXPECT);
+
+    int mouse_x, mouse_y;
+
+    get_mouse_pos(& mouse_x, & mouse_y);
+    drawrect_force(mouse_x, mouse_y, 10, 10, 0);
 }
 
 void update_area(int xl, int yl, int width, int height) {

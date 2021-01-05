@@ -25,3 +25,4 @@
 #define SYS_drawarea_short 26
 #define SYS_update  24
 #define SYS_get_msg 25
+#define SYS_addcomand_c 27

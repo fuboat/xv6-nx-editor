@@ -12,6 +12,24 @@
 
 static struct spinlock mouse_lock;
 
+static int count = 0;
+
+static int x_overflow, y_overflow;
+static int x_sign, y_sign;
+static int btn_left, btn_right, btn_mid;
+
+static int btn_left_down = 0;
+static int btn_right_down = 0;
+
+static int x_delta, y_delta;
+
+static int x_pos, y_pos;
+
+void get_mouse_pos(int *x, int *y) {
+    *x = x_pos;
+    *y = y_pos;
+}
+
 void mouseinit(void) {
     outb(0x64, 0xa8);
     outb(0x64, 0xd4);
@@ -29,19 +47,7 @@ void mouseintr(void) {
 
     uint data = inb(0x60);
     
-    static int count = 0;
     ++ count;
-
-    static int x_overflow, y_overflow;
-    static int x_sign, y_sign;
-    static int btn_left, btn_right, btn_mid;
-
-    static int btn_left_down = 0;
-    static int btn_right_down = 0;
-
-    static int x_delta, y_delta;
-
-    static int x_pos, y_pos;
 
     switch(count) {
         case 1:
@@ -80,8 +86,16 @@ void mouseintr(void) {
 
         // cprintf("MOUSE x_pos = %d, y_pos = %d\n", x_pos, y_pos);
         drawrect_force(x_pos, y_pos, 10, 10, 0);
+        if (btn_left && !btn_left_down) add_mouse_msg(MOUSE_LEFT_PRESS, x_pos, y_pos);
+        if (!btn_left && btn_left_down) add_mouse_msg(MOUSE_LEFT_RELEASE, x_pos, y_pos);
+        if (btn_right && !btn_right_down) add_mouse_msg(MOUSE_RIGHT_PRESS, x_pos, y_pos);
+        if (!btn_right && btn_right_down) add_mouse_msg(MOUSE_RIGHT_RELEASE, x_pos, y_pos);
 
-        
+        btn_left_down = btn_left;
+        btn_right_down = btn_right;
+
+        // if (btn_left) cprintf("[SYS] btn left msg.\n");
+        // if (btn_right) cprintf("[SYS] btn right msg.\n");
 
         // all information get. a new circle.
         count = 0;
