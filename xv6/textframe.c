@@ -3,6 +3,8 @@
 #include "types.h"
 #include "user.h"
 #include "fcntl.h"
+#include "stat.h"
+
 #include "textframe.h"
 
 #define printf(...)
@@ -60,6 +62,22 @@ char *data_assign(char *src, int index, int len, char *tmp, int tmplen, int tmpf
     }
 }
 
+// 判断路径类型 0 for file 1 for dir
+int File_isDir(char *filename){
+    int fd = open(filename, 0);
+    struct stat st;
+    fstat(fd, &st);
+    if (st.type == T_DIR)
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    } 
+}
+
+
 int textframe_read(struct textframe *text, char *filename)
 {
     //打开文件
@@ -99,6 +117,8 @@ int textframe_read(struct textframe *text, char *filename)
 
     close(fd);
     return 0;
+    
+    
 }
 
 // int textframe_read(struct textframe *text, char *filename)

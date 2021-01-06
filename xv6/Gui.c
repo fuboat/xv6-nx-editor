@@ -414,6 +414,7 @@ fmtname(char *path)
 
 int FileListBuffer_update_FileList(struct FileListBuffer * buffer) {
     char * path = buffer->path;
+    DEBUGDF("file_path: %s", path);
     char buf[512];
 
     int fd = open(path, 0);
@@ -573,7 +574,17 @@ int handle_keyboard_FileBuffer(struct FileBuffer * buffer, int c) {
 int FileBuffer_open_file(struct FileBuffer * buffer, char * filepathname) {
     strcpy(buffer->filepathname, filepathname);
     // textframe_write(buffer->edit->text, "1.txt");
-    textframe_read(buffer->edit->text, filepathname);
+    int file_type = File_isDir(filepathname);
+    if(file_type == 0){
+        textframe_read(buffer->edit->text, filepathname);
+    }
+    else
+    {
+        //To do 释放之前的变量?
+        // make_FileListBuffer();
+        // FileListBuffer_update_FileList();
+    }
+    
     return 0;
 }
 
@@ -626,7 +637,7 @@ int handle_mouse_BufferManager(struct BufferManager* manager, int x, int y, int 
     // 校正鼠标在当前部件的显示位置。
     mouse_pos_transform(manager->area, &x, &y);
 
-    DEBUG2("[GUI: BufferManager] mouse in BufferManager, pos = (%d, %d), type = %d\n", x, y, mouse_opt);
+    // DEBUG2("[GUI: BufferManager] mouse in BufferManager, pos = (%d, %d), type = %d\n", x, y, mouse_opt);
     
     if(isRename && manager->fileList->file_selected){
         int x1 = x, y1 = y;
@@ -840,7 +851,8 @@ int FileSwitchBar_open_file(struct FileSwitchBar * fileSwitch, char * filename) 
     if(!FileSwitchBar_find_file(fileSwitch, filename)){
         return 0;
     }
-    if (fileSwitch->n_files < FILESWITCH_MAX_FILES) {
+    // 编辑器顶栏切换选中文件
+    if (fileSwitch->n_files < FILESWITCH_MAX_FILES && File_isDir(filename) == 0) {
         make_Button(fileSwitch->buttons + fileSwitch->n_files, fileSwitch, "FileSwitchBar");
         fileSwitch->buttons[fileSwitch->n_files]->exec = Button_exec_switch_to_file;
         make_FileBuffer(fileSwitch->files + fileSwitch->n_files, fileSwitch);
@@ -889,7 +901,7 @@ int make_ToolBar(struct ToolBar ** pToolBar, struct BufferManager * parent) {
 int draw_ToolBar(struct ToolBar * pToolBar, struct Area area) {
     area = calc_current_area(area, pToolBar->area);
     int x = 0;
-    char tools[TOOL_NUM][10] = {"open", "close", "save"};
+    char tools[TOOL_NUM][20] = {"New File", "New Folder", "save"};
     for (int i = 0; i < TOOL_NUM; ++ i) {
         struct Button * cur_button = pToolBar->buttons[i];
         cur_button->area.x = x;
@@ -916,8 +928,8 @@ int handle_mouse_ToolBar(struct ToolBar* pToolBar, int x, int y, int mouse_opt){
 }
 
 int Button_exec_tool(struct Button * button) {
-    DEBUG("button_exec\n");
-    DEBUG(button->edit->text->data[0]);
+    // DEBUG("button_exec\n");
+    // DEBUG(button->edit->text->data[0]);
     if(!button){
         return -1;
     }
@@ -925,12 +937,15 @@ int Button_exec_tool(struct Button * button) {
     if(!tool_name){
         return -1;
     }
-    if(!strcmp(tool_name,"open")){
-        DEBUG("\\\\\\ clicked open botton ------\n");
-    }else if(!strcmp(tool_name, "close")){
-        DEBUG("\\\\\\ clicked close botton ------\n");
+    if(!strcmp(tool_name,"New File")){
+        DEBUGDF("\\\\\\ clicked new file botton ------\n");
+        //To do
+        // 新文件填入filelist 放在fileswitchbar末尾 显示untitled并调用重命名
+    }else if(!strcmp(tool_name, "New Folder")){
+        DEBUGDF("\\\\\\ clicked new folder botton ------\n");
+        // 新目录填入filelist 显示untitled并调用重命名
     }else if(!strcmp(tool_name, "save")){
-        DEBUG("\\\\\\ clicked save botton ------\n");
+        DEBUGDF("\\\\\\ clicked save botton ------\n");
         if(strcmp(button->parent_type, "ToolBar")){
             return -1;
         }
