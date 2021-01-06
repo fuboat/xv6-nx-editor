@@ -51,7 +51,7 @@ struct BufferManager {
     struct Area area;
     struct FileListBuffer * fileList;
     struct FileSwitchBar * fileSwitch;
-
+    struct ToolBar * toolBar;
     void * focus;
 };
 
@@ -88,6 +88,18 @@ struct FileSwitchBar {
     
     struct BufferManager * parent;
 };
+
+#define TOOL_NUM 3
+
+struct ToolBar
+{
+    struct Area area;
+    struct Button * buttons[TOOL_NUM];
+
+    struct BufferManager * parent;
+    
+};
+
 
 int make_TextEdit(struct TextEdit **, void * parent, char * parent_type);
 int draw_TextEdit(struct TextEdit*, struct Area area);
@@ -129,3 +141,10 @@ int draw_FileSwitchBar(struct FileSwitchBar *, struct Area area);
 int handle_mouse_FileSwitchBar(struct FileSwitchBar *, int x, int y, int mouse_opt);
 int handle_keyboard_FileSwitchBar(struct FileSwitchBar *, int c);
 int FileSwitchBar_open_file(struct FileSwitchBar * fileSwitch, char * filename);
+int FileSwitchBar_save_file(struct FileSwitchBar * fileSwitch, char * filename);
+
+int make_ToolBar(struct ToolBar **, struct BufferManager* parent);
+int draw_ToolBar(struct ToolBar *, struct Area area);
+int handle_mouse_ToolBar(struct ToolBar*, int x, int y, int mouse_opt);
+int handle_keyboard_ToolBar(struct ToolBar*, int c);
+int Button_exec_tool(struct Button * button);

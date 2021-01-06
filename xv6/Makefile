@@ -180,7 +180,7 @@ UPROGS=\
 	_Gui\
 
 fs.img: mkfs README $(UPROGS)
-	./mkfs fs.img README $(UPROGS) hankaku.txt hankaku-test.txt
+	./mkfs fs.img README $(UPROGS) hankaku.txt hankaku-test.txt aTest.txt
 
 -include *.d
 

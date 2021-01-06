@@ -459,14 +459,17 @@ int textframe_write(struct textframe *text, char *filename)
     //打开文件
     // std::ofstream fd;
     // fd.open(filename, std::ios::out);
+    // DEBUG("start write file\n");
     int fd = 0; //文件描述符
     printf(1, "textframe write start\n");
     fd = open(filename, O_CREATE | O_RDWR);
     if (fd < 0)
     //if (!fd)
     {
+        DEBUG("can't open file\n");
         return -1;
     }
+    DEBUG("opened file\n");
     int len = 0;
     for (int i = 0; i < text->maxrow; i++)
     {

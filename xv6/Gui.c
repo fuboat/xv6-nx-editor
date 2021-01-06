@@ -137,7 +137,7 @@ int handle_mouse_TextEdit(struct TextEdit *edit, int x, int y, int mouse_opt) {
     mouse_pos_transform(edit->area, &x, &y);
 
     cursor_focus = edit;
-
+    move_to_pos(edit->text, y/16, x/8);
     DEBUG("[GUI: TextEdit] mouse in TextEdit, pos = (%d, %d), type = %d\n", x, y, mouse_opt);
 
     return 0;
@@ -562,6 +562,16 @@ int FileBuffer_open_file(struct FileBuffer * buffer, char * filepathname) {
     return 0;
 }
 
+int FileBuffer_save_file(struct FileBuffer * buffer, char * filepathname) {
+    DEBUG("in saving\n");
+    DEBUG(filepathname);
+    DEBUG("\ncontent:\n");
+    DEBUG(buffer->edit->text->data[0]);
+    textframe_write(buffer->edit->text, filepathname);
+    DEBUG("\nfinish save\n");
+    return 0;
+}
+
 /**************************
  * 
  * BufferManager handler functions.
@@ -578,6 +588,7 @@ int make_BufferManager(struct BufferManager ** pmanager) {
     // manager->file = 0;
     // make_FileBuffer(& manager->file, manager);
     make_FileSwitchBar(& manager->fileSwitch, manager);
+    make_ToolBar(& manager->toolBar, manager);
     manager->focus = 0;
     *pmanager = manager;
     return 0;
@@ -590,6 +601,8 @@ int draw_BufferManager(struct BufferManager * manager, struct Area area) {
     draw_FileListBuffer(manager->fileList, area);
     // draw_FileBuffer(manager->file, area);
     draw_FileSwitchBar(manager->fileSwitch, area);
+    DEBUG("----- draw toolbar -----\n");
+    draw_ToolBar(manager->toolBar, area);
     return 0;
 }
 
@@ -604,7 +617,9 @@ int handle_mouse_BufferManager(struct BufferManager* manager, int x, int y, int 
         return handle_mouse_FileListBuffer(manager->focus=manager->fileList, x, y, mouse_opt);
     } else if (is_pos_in_area(manager->fileSwitch->area, x, y)) {
         return handle_mouse_FileSwitchBar(manager->focus=manager->fileSwitch, x, y, mouse_opt);
-    } else {
+    } else if (is_pos_in_area(manager->toolBar->area, x, y)) {
+        return handle_mouse_ToolBar(manager->focus=manager->toolBar, x, y, mouse_opt);
+    } else{
         return 0;
     }
 }
@@ -654,6 +669,7 @@ int handle_mouse_Button(struct Button * button, int x, int y, int mouse_opt) {
         button->exec(button);
         return 0;
     } else {
+        DEBUG("\\\\no exec");
         return 0;
     }
 }
@@ -678,7 +694,7 @@ int Button_exec_switch_to_file(struct Button * button) {
 int make_FileSwitchBar(struct FileSwitchBar **pfileSwitch, struct BufferManager * parent) {
     struct FileSwitchBar * fileSwitch = malloc(sizeof(struct FileSwitchBar));
     
-    fileSwitch->area = (struct Area) { 100, 10, 700, 400, 0, 0 };
+    fileSwitch->area = (struct Area) { 100, 30, 700, 400, 0, 0 };
 
     memset(fileSwitch->buttons, 0, sizeof(fileSwitch->buttons));
     memset(fileSwitch->files, 0, sizeof(fileSwitch->files));
@@ -759,6 +775,93 @@ int FileSwitchBar_open_file(struct FileSwitchBar * fileSwitch, char * filename) 
     }
 }
 
+
+/*********************
+ * 
+ * ToolBar
+ * 
+ *********************/
+int make_ToolBar(struct ToolBar ** pToolBar, struct BufferManager * parent) {
+    struct ToolBar * toolbar = malloc(sizeof(struct ToolBar));
+    
+    toolbar->area = (struct Area) { 0, 0, 700, 30, 0, 0 };
+
+    memset(toolbar->buttons, 0, sizeof(toolbar->buttons));
+    for(int i = 0; i < TOOL_NUM; ++i){
+        make_Button(toolbar->buttons + i, toolbar, "ToolBar");
+    }
+    toolbar->parent = parent;
+
+    *pToolBar = toolbar;
+
+    return 0;
+}
+
+int draw_ToolBar(struct ToolBar * pToolBar, struct Area area) {
+    area = calc_current_area(area, pToolBar->area);
+    int x = 0;
+    char tools[TOOL_NUM][10] = {"open", "close", "save"};
+    for (int i = 0; i < TOOL_NUM; ++ i) {
+        struct Button * cur_button = pToolBar->buttons[i];
+        cur_button->area.x = x;
+        draw_Button(cur_button, area);
+        pToolBar->buttons[i]->exec = Button_exec_tool;
+        LineEdit_set_str(cur_button->edit->text, tools[i]);
+        x += cur_button->area.width;
+    }
+    return 0;
+}
+
+int handle_mouse_ToolBar(struct ToolBar* pToolBar, int x, int y, int mouse_opt){
+    mouse_pos_transform(pToolBar->area, &x, &y);
+
+    if (mouse_opt == MOUSE_LEFT_PRESS) {
+        for (int i = 0; i < TOOL_NUM; ++ i) {
+            struct Button * cur_button = pToolBar->buttons[i];
+            if (is_pos_in_area(cur_button->area, x, y)) {
+                return handle_mouse_Button(cur_button, x, y, mouse_opt);
+            }
+        }
+    }
+    return 0;
+}
+
+int Button_exec_tool(struct Button * button) {
+    DEBUG("button_exec\n");
+    DEBUG(button->edit->text->data[0]);
+    if(!button){
+        return -1;
+    }
+    char* tool_name = button->edit->text->data[0];
+    if(!tool_name){
+        return -1;
+    }
+    if(!strcmp(tool_name,"open")){
+        DEBUG("\\\\\\ clicked open botton ------\n");
+    }else if(!strcmp(tool_name, "close")){
+        DEBUG("\\\\\\ clicked close botton ------\n");
+    }else if(!strcmp(tool_name, "save")){
+        DEBUG("\\\\\\ clicked save botton ------\n");
+        if(strcmp(button->parent_type, "ToolBar")){
+            return -1;
+        }
+        struct ToolBar* pToolBar = (struct ToolBar*) button->parent;
+        if(!pToolBar){
+            return -1;
+        }
+        struct FileBuffer * cur = pToolBar->parent->fileSwitch->current;
+        if(cur){
+            DEBUG("saving\n\n");
+            FileBuffer_save_file(cur, cur->filepathname);
+        }
+        else
+        {
+            DEBUG("no open file\n");
+        }
+        
+    }
+    return -1;
+}
 /*********************
  * 
  * Main function. 

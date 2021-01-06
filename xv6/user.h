@@ -51,6 +51,7 @@ enum MSG_TYPE {
     MOUSE_RIGHT_RELEASE
 };
 
-#define DEBUG(...) // printf(2, __VA_ARGS__)
+#define DEBUG(...)  // printf(2, __VA_ARGS__)
+#define DEBUG2(...)  printf(2, __VA_ARGS__)
 #define max(a, b) (a) > (b) ? (a) : (b)
 #define min(a, b) (a) < (b) ? (a) : (b)
