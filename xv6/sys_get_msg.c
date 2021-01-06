@@ -27,6 +27,8 @@ void add_kbd_msg(int c) {
 
 void add_mouse_msg(enum MSG_TYPE mouse_opt, int x, int y) {
     message[tail++] = mouse_opt << 24 | x << 12 | y;
+    if (tail == KBD_C_QUEUE_LENGTH)
+        tail = 0;
 }
 
 int sys_get_msg(void) {
