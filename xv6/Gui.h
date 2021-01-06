@@ -126,6 +126,7 @@ int make_FileBuffer(struct FileBuffer **, struct FileSwitchBar * parent);
 int draw_FileBuffer(struct FileBuffer *, struct Area area);
 int handle_mouse_FileBuffer(struct FileBuffer *, int x, int y, int mouse_opt);
 int handle_keyboard_FileBuffer(struct FileBuffer *, int c);
+int free_FileBuffer(struct FileBuffer**);
 
 int make_BufferManager(struct BufferManager **);
 int draw_BufferManager(struct BufferManager *, struct Area area);
@@ -135,6 +136,8 @@ int handle_keyboard_BufferManager(struct BufferManager *, int c);
 int make_Button(struct Button **, void * parent, char * parent_type);
 int draw_Button(struct Button *, struct Area area);
 int handle_mouse_Button(struct Button *, int x, int y, int mouse_opt);
+int handle_close_Button(struct Button * button);
+int free_Button(struct Button **);
 
 int make_FileSwitchBar(struct FileSwitchBar **, struct BufferManager * parent);
 int draw_FileSwitchBar(struct FileSwitchBar *, struct Area area);
@@ -142,6 +145,7 @@ int handle_mouse_FileSwitchBar(struct FileSwitchBar *, int x, int y, int mouse_o
 int handle_keyboard_FileSwitchBar(struct FileSwitchBar *, int c);
 int FileSwitchBar_open_file(struct FileSwitchBar * fileSwitch, char * filename);
 int FileSwitchBar_save_file(struct FileSwitchBar * fileSwitch, char * filename);
+int FileSwitchBar_find_file(struct FileSwitchBar * fileswitch, char * filename);
 
 int make_ToolBar(struct ToolBar **, struct BufferManager* parent);
 int draw_ToolBar(struct ToolBar *, struct Area area);

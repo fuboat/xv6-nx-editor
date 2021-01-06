@@ -466,10 +466,10 @@ int textframe_write(struct textframe *text, char *filename)
     if (fd < 0)
     //if (!fd)
     {
-        DEBUG("can't open file\n");
+        DEBUG2("can't open file\n");
         return -1;
     }
-    DEBUG("opened file\n");
+    DEBUG2("opened file\n");
     int len = 0;
     for (int i = 0; i < text->maxrow; i++)
     {

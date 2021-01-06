@@ -563,12 +563,13 @@ int FileBuffer_open_file(struct FileBuffer * buffer, char * filepathname) {
 }
 
 int FileBuffer_save_file(struct FileBuffer * buffer, char * filepathname) {
-    DEBUG("in saving\n");
-    DEBUG(filepathname);
-    DEBUG("\ncontent:\n");
-    DEBUG(buffer->edit->text->data[0]);
+    //DEBUG2("in saving\n");
+    //DEBUG(filepathname);
+    //DEBUG2("\ncontent:\n");
+    //DEBUG2(buffer->edit->text->data[0]);
+    textframe_write(buffer->edit->text, "1.txt");
     textframe_write(buffer->edit->text, filepathname);
-    DEBUG("\nfinish save\n");
+    DEBUG2("\nfinish save\n");
     return 0;
 }
 
@@ -664,14 +665,49 @@ int draw_Button(struct Button * button, struct Area area) {
 }
 
 int handle_mouse_Button(struct Button * button, int x, int y, int mouse_opt) {
-
+    //DEBUG2("in mouse-Button");
+    //DEBUG2(mouse_opt);
     if (mouse_opt == MOUSE_LEFT_PRESS && button->exec) {
         button->exec(button);
         return 0;
-    } else {
+    }else if(mouse_opt == MOUSE_RIGHT_PRESS) {
+        //DEBUG2("close//\n");
+        handle_close_Button(button);
+        return 0;
+    }else {
         DEBUG("\\\\no exec");
         return 0;
     }
+}
+
+int handle_close_Button(struct Button * button){
+    if(button && button->parent && !strcmp(button->parent_type, "FileSwitchBar")){
+        struct FileSwitchBar * fileswitch = (struct FileSwitchBar *) button->parent;
+        for (int i = 0; i < fileswitch->n_files; ++ i) {
+            if (fileswitch->buttons[i] == button) {
+                // the last
+                struct FileBuffer * buffer = fileswitch->files[i];
+                DEBUG2("finding\n");
+                if(i == fileswitch->n_files - 1){
+                    if( i == 0){
+                        fileswitch->current = 0;
+                    }else{
+                        fileswitch->current = fileswitch->files[i-1];
+                    }
+                }else{
+                    for(int j = i; j < fileswitch->n_files; ++j){
+                        fileswitch->files[j] = fileswitch->files[j+1];
+                        fileswitch->buttons[j] = fileswitch->buttons[j+1];
+                    }
+                    fileswitch->current = fileswitch->files[i];
+                }
+                // free
+                --(fileswitch->n_files);
+                return 0;
+            }
+        }
+    }
+    return -1;
 }
 
 int Button_exec_switch_to_file(struct Button * button) {
@@ -685,6 +721,9 @@ int Button_exec_switch_to_file(struct Button * button) {
     return -1;
 }
 
+int free_Button(struct Button ** button){
+
+}
 /*********************
  * 
  * FileSwitchBar handle function.
@@ -736,6 +775,13 @@ int handle_mouse_FileSwitchBar(struct FileSwitchBar * fileSwitch, int x, int y, 
                 return handle_mouse_Button(cur_button, x, y, mouse_opt);
             }
         }
+    }else if (mouse_opt == MOUSE_RIGHT_PRESS) {
+        for (int i = 0; i < fileSwitch->n_files; ++ i) {
+            struct Button * cur_button = fileSwitch->buttons[i];
+            if (is_pos_in_area(cur_button->area, x, y)) {
+                return handle_mouse_Button(cur_button, x, y, mouse_opt);
+            }
+        }
     }
 
     if (fileSwitch->current && 
@@ -761,6 +807,9 @@ int handle_keyboard_FileSwitchBar(struct FileSwitchBar * fileSwitch, int c) {
 }
 
 int FileSwitchBar_open_file(struct FileSwitchBar * fileSwitch, char * filename) {
+    if(!FileSwitchBar_find_file(fileSwitch, filename)){
+        return 0;
+    }
     if (fileSwitch->n_files < FILESWITCH_MAX_FILES) {
         make_Button(fileSwitch->buttons + fileSwitch->n_files, fileSwitch, "FileSwitchBar");
         fileSwitch->buttons[fileSwitch->n_files]->exec = Button_exec_switch_to_file;
@@ -775,6 +824,16 @@ int FileSwitchBar_open_file(struct FileSwitchBar * fileSwitch, char * filename) 
     }
 }
 
+int FileSwitchBar_find_file(struct FileSwitchBar * fileswitch, char * filename){
+    //DEBUG2("\nin finding\n");
+    for (int i = 0; i < fileswitch->n_files; ++ i) {
+        if (!strcmp(fileswitch->buttons[i]->edit->text->data[0], filename)) {
+            fileswitch->current = fileswitch->files[i];
+            return 0;
+        }
+    }
+    return -1;
+}
 
 /*********************
  * 
@@ -862,6 +921,7 @@ int Button_exec_tool(struct Button * button) {
     }
     return -1;
 }
+
 /*********************
  * 
  * Main function. 
