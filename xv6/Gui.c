@@ -11,6 +11,7 @@
 #define AREA_ARGS(area) area.x, area.y, area.width, area.height
 
 static void * cursor_focus;
+int isRename = 0;
 
 void mouse_pos_transform(struct Area cur_area, int *x, int *y) {
     *x -= cur_area.x - cur_area.offset_x;
@@ -284,7 +285,7 @@ int handle_mouse_LineEdit(struct LineEdit *edit, int x, int y, int mouse_opt) {
     mouse_pos_transform(edit->area, &x, &y);
 
     cursor_focus = edit;
-
+    move_to_pos(edit->text, y/16, x/8);
     DEBUG("[GUI: LineEdit] mouse in LineEdit, pos = (%d, %d), type = %d\n", x, y, mouse_opt);
 
     return 0;
@@ -371,9 +372,13 @@ int handle_mouse_FileListBuffer(struct FileListBuffer * buffer, int x, int y, in
     for (int i = 0; i < buffer->n_files; ++ i) {
         if (is_pos_in_area(buffer->files[i]->area, x, y)) {
             buffer->file_selected = buffer->files[i];
-            if (mouse_opt == MOUSE_LEFT_PRESS)
+            if (mouse_opt == MOUSE_LEFT_PRESS){
                 FileSwitchBar_open_file(buffer->parent->fileSwitch, buffer->files[i]->edit->text->data[0]);
-            return handle_mouse_FileNameControl(buffer->files[i], x, y, mouse_opt);
+                return 0;
+            }else if(mouse_opt == MOUSE_RIGHT_PRESS){
+                isRename = 1;
+                return handle_mouse_FileNameControl(buffer->files[i], x, y, mouse_opt);
+            }
         }
     }
 
@@ -512,6 +517,16 @@ int handle_keyboard_FileNameControl(struct FileNameControl * control, int c) {
     return handle_keyboard_LineEdit(control->edit, c);
 }
 
+int rename_FileNameControl(struct FileNameControl * control){
+    isRename = 0;
+    if(strcpy(control->edit->text->data[0], control->oldName)){
+        //rename(control->oldName, control->edit->text->data[0]);
+        DEBUG2("rename finish\n");
+    }else{
+        DEBUG2("no change finish\n");
+    }
+}
+
 /**************************
  * 
  * CommandBuffer handler functions.
@@ -611,14 +626,27 @@ int handle_mouse_BufferManager(struct BufferManager* manager, int x, int y, int 
     // 校正鼠标在当前部件的显示位置。
     mouse_pos_transform(manager->area, &x, &y);
 
-    DEBUG("[GUI: BufferManager] mouse in BufferManager, pos = (%d, %d), type = %d\n", x, y, mouse_opt);
-
+    DEBUG2("[GUI: BufferManager] mouse in BufferManager, pos = (%d, %d), type = %d\n", x, y, mouse_opt);
+    
+    if(isRename && manager->fileList->file_selected){
+        int x1 = x, y1 = y;
+        mouse_pos_transform(manager->fileList->area, &x1, &y1);
+        if(!is_pos_in_area(manager->fileList->file_selected->area, x1, y1)){
+            if(isRename == 1){
+                DEBUG2("renaming\n");
+            }
+            rename_FileNameControl(manager->fileList->file_selected);
+        }
+    }
     if (is_pos_in_area(manager->fileList->area, x, y)) {
+        DEBUG2("in filelist\n");
         // 如果点击了子部件，那么，焦点设在子部件上。
         return handle_mouse_FileListBuffer(manager->focus=manager->fileList, x, y, mouse_opt);
     } else if (is_pos_in_area(manager->fileSwitch->area, x, y)) {
+        DEBUG2("in switch\n");
         return handle_mouse_FileSwitchBar(manager->focus=manager->fileSwitch, x, y, mouse_opt);
     } else if (is_pos_in_area(manager->toolBar->area, x, y)) {
+        DEBUG2("in toolbar\n");
         return handle_mouse_ToolBar(manager->focus=manager->toolBar, x, y, mouse_opt);
     } else{
         return 0;
@@ -627,7 +655,7 @@ int handle_mouse_BufferManager(struct BufferManager* manager, int x, int y, int 
 
 int handle_keyboard_BufferManager(struct BufferManager * manager, int c) {
     // 根据焦点判断由哪一部件接收键盘输入
-    if (manager->focus == manager->fileList)
+    if (isRename && manager->focus == manager->fileList)
         return handle_keyboard_FileListBuffer(manager->fileList, c);
     else if (manager->focus == manager->fileSwitch) {
         return handle_keyboard_FileSwitchBar(manager->fileSwitch, c);
@@ -702,6 +730,8 @@ int handle_close_Button(struct Button * button){
                     fileswitch->current = fileswitch->files[i];
                 }
                 // free
+                LineEdit_set_str(buffer->edit->text, "");
+                LineEdit_set_str(button->edit->text, "");
                 --(fileswitch->n_files);
                 return 0;
             }

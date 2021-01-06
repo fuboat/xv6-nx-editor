@@ -1,2 +1,2 @@
-This is an origin test！
-This is its second line！
+This is an origin test!
+This is its second line!

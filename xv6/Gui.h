@@ -121,6 +121,7 @@ int make_FileNameControl(struct FileNameControl **, struct FileListBuffer * pare
 int draw_FileNameControl(struct FileNameControl *, struct Area area);
 int handle_mouse_FileNameControl(struct FileNameControl*, int x, int y, int mouse_opt);
 int handle_keyboard_FileNameControl(struct FileNameControl*, int c);
+int rename_FileNameControl(struct FileNameControl *);
 
 int make_FileBuffer(struct FileBuffer **, struct FileSwitchBar * parent);
 int draw_FileBuffer(struct FileBuffer *, struct Area area);
