@@ -54,6 +54,7 @@ struct BufferManager {
     struct FileListBuffer * fileList;
     struct FileSwitchBar * fileSwitch;
     struct ToolBar * toolBar;
+    struct PinyinInput * pinyin;
     void * focus;
     struct textframe* clipBoard;
 };
@@ -101,6 +102,17 @@ struct ToolBar
 
     struct BufferManager * parent;
     
+};
+
+#define ITEM_EVERY_PAGE 5
+
+struct PinyinInput
+{
+    struct Area area;
+    int page;
+    int on; /* 如果 on = true, 则接管所有的键盘输入。ctrl+shift 切换回 false. */
+    struct TextEdit * edit;
+    struct BufferManager * parent;
 };
 
 
@@ -158,3 +170,6 @@ int handle_mouse_ToolBar(struct ToolBar*, int x, int y, int mouse_opt);
 int handle_keyboard_ToolBar(struct ToolBar*, int c);
 int Button_exec_tool(struct Button * button);
 
+int make_pinyinInput(struct PinyinInput **, struct BufferManager * parent);
+int draw_pinyinInput(struct PinyinInput *, struct Area area);
+int handle_keyboard_pinyinInput(struct PinyinInput *, int c);

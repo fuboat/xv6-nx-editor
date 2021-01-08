@@ -26,6 +26,8 @@ void move_to_next_line(struct textframe * text);
 void move_to_last_line(struct textframe * text);
 void new_line_to_editor(struct textframe * text);
 void move_to_end(struct textframe * text);
+void move_to_pos(struct textframe *text, int r, int c);
 void LineEdit_set_str(struct textframe * text, char * str);
+void clear_cur_line(struct textframe * text);
 
 extern struct textframe * command_textframe;

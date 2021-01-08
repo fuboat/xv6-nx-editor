@@ -11,6 +11,9 @@
 #define AREA_ARGS(area) area.x, area.y, area.width, area.height
 
 static void * cursor_focus;
+
+// 0 for "LineEdit" or 1 for "TextEdit";
+static int cursor_focus_type = 0;
 int isRename = 0;
 
 void mouse_pos_transform(struct Area cur_area, int *x, int *y) {
@@ -222,6 +225,7 @@ int handle_mouse_TextEdit(struct TextEdit *edit, int x, int y, int mouse_opt) {
     mouse_pos_transform(edit->area, &x, &y);
 
     cursor_focus = edit;
+    cursor_focus_type = 1;
     move_to_pos(edit->text, y/16, x/8);
     if(mouse_opt == MOUSE_LEFT_PRESS){
         edit->point1_row = y/16;
@@ -257,6 +261,7 @@ int handle_mouse_TextEdit(struct TextEdit *edit, int x, int y, int mouse_opt) {
     return 0;
 }
 
+#define CTRL_P      16
 #define BACKSPACE   8
 #define ENTER       10
 #define LEFT_ARROW  228
@@ -334,22 +339,20 @@ int handle_keyboard_TextEdit(struct TextEdit *edit, int c) {
             if(clip){
                 LineEdit_set_str(clip, "");
             }
-            clip = textframe_extract(text, edit->point1_row, edit->point1_col, 
+            pFile->parent->parent->clipBoard = textframe_extract(text, edit->point1_row, edit->point1_col, 
                                                 edit->point2_row, edit->point2_col);
-            DEBUG2("in ctrlc222 %d %d %d %d\n",edit->point1_row, edit->point1_col, 
-                                                edit->point2_row, edit->point2_col);
-            if(text->data[0]){
-                DEBUG2("in ctrlc 11\n");
-                DEBUG2(text->data[0]);
-            }
         }
         break;
-    case CTRL_V:
-        DEBUG2("in ctrlv \n");
-        if(text->data[0]){
-            DEBUG2("in ctrlv 11\n");
-            DEBUG2(text->data[0]);
+    case CTRL_V:{
+        struct FileBuffer* pFile = (struct FileBuffer*)(edit->parent);
+        if(!pFile){
+            break;
         }
+        struct textframe* clip = pFile->parent->parent->clipBoard;
+        if(!clip){
+            break;
+        }
+        DEBUG2("in ctrlv \n");
         if(edit->point2_col != -1){
             text  = (textframe_delete(text, edit->point1_row, edit->point1_col, edit->point2_row, edit->point2_col));
             LineEdit_set_str(edit->text, "");
@@ -358,12 +361,16 @@ int handle_keyboard_TextEdit(struct TextEdit *edit, int c) {
             edit->point2_row = -1;
             move_to_pos(text, edit->point1_row, edit->point1_col);
         }
-        struct FileBuffer* pFile = (struct FileBuffer*)(edit->parent);
-        if(!pFile){
-            break;
-        }
-        text = textframe_insert(text, pFile->parent->parent->clipBoard, edit->point1_row,edit->point1_col);
+        DEBUG2("clip");
+        DEBUG2(clip->data[0]);
+        int start_row = text->cursor_row, start_col = text->cursor_col;
+        DEBUG2("LALALA2: %d %d:\n", start_row,start_col);
+        text = textframe_insert(text, clip, start_row, start_col);
+        LineEdit_set_str(edit->text, "");
+        edit->text = text;
+        // 计算粘贴后的光标位置
         break;
+    }
     default: {
         if (32 <= c && c <= 126) {
             if(edit->point2_col != -1){
@@ -478,6 +485,7 @@ int handle_mouse_LineEdit(struct LineEdit *edit, int x, int y, int mouse_opt) {
     mouse_pos_transform(edit->area, &x, &y);
 
     cursor_focus = edit;
+    cursor_focus = 0;
     move_to_pos(edit->text, y/16, x/8);
     DEBUG("[GUI: LineEdit] mouse in LineEdit, pos = (%d, %d), type = %d\n", x, y, mouse_opt);
 
@@ -719,6 +727,7 @@ int rename_FileNameControl(struct FileNameControl * control){
     }else{
         DEBUG2("no change finish\n");
     }
+    return 0;
 }
 
 
@@ -807,6 +816,7 @@ int make_BufferManager(struct BufferManager ** pmanager) {
     manager->clipBoard = 0;
     make_FileSwitchBar(& manager->fileSwitch, manager);
     make_ToolBar(& manager->toolBar, manager);
+    make_pinyinInput(& manager->pinyin, manager);
     manager->focus = 0;
     *pmanager = manager;
     return 0;
@@ -821,6 +831,7 @@ int draw_BufferManager(struct BufferManager * manager, struct Area area) {
     draw_FileSwitchBar(manager->fileSwitch, area);
     DEBUG("----- draw toolbar -----\n");
     draw_ToolBar(manager->toolBar, area);
+    draw_pinyinInput(manager->pinyin, area);
     return 0;
 }
 
@@ -861,8 +872,16 @@ int handle_mouse_BufferManager(struct BufferManager* manager, int x, int y, int 
 
 int handle_keyboard_BufferManager(struct BufferManager * manager, int c) {
     // 根据焦点判断由哪一部件接收键盘输入
+    // 当输入法启用且输入的内容为 a-z 的字母时，或数字时，控制权移交到输入法
     DEBUG2("key bord: %d\n", c);
-    if (isRename && manager->focus == manager->fileList)
+    if(c == CTRL_P) {
+        manager->pinyin->on ^= 1;
+        printf(0, "is pinyin on: %d\n", manager->pinyin->on);
+        return 0;
+    } else if(manager->pinyin->on && (('a' <= c && c <= 'z') || ('0' <= c && c <= '9') || c == ENTER || c == BACKSPACE || c == ',' || c == '.')) {
+        // TODO:
+        return handle_keyboard_pinyinInput(manager->pinyin, c);
+    } else if (isRename && manager->focus == manager->fileList)
         return handle_keyboard_FileListBuffer(manager->fileList, c);
     else if (manager->focus == manager->fileSwitch) {
         return handle_keyboard_FileSwitchBar(manager->fileSwitch, c);
@@ -958,7 +977,7 @@ int Button_exec_switch_to_file(struct Button * button) {
 }
 
 int free_Button(struct Button ** button){
-
+    return 0;
 }
 /*********************
  * 
@@ -1215,6 +1234,109 @@ int Button_exec_tool(struct Button * button) {
 
 /*********************
  * 
+ * pinyin Input.
+ * 
+ *********************/
+
+int make_pinyinInput(struct PinyinInput ** pPinyin, struct BufferManager * parent) {
+    struct PinyinInput * pinyin = malloc(sizeof(struct PinyinInput));
+    
+    pinyin->area = (struct Area) { 400, 400, 200, 32, 0, 0 };
+    pinyin->page = 0;
+    pinyin->on = 0;
+    make_TextEdit(& pinyin->edit, parent, "pinyinInput");
+    pinyin->edit->area = (struct Area) { 0, 0, 200, 32, 0, 0 };
+    LineEdit_set_str(pinyin->edit->text, "");
+    new_line_to_editor(pinyin->edit->text);
+    move_to_pos(pinyin->edit->text, 0, 0);
+    pinyin->parent = parent;
+
+    *pPinyin = pinyin;
+
+    return 0;
+}
+
+int draw_pinyinInput(struct PinyinInput * pinyin, struct Area area) {
+    area = calc_current_area(area, pinyin->area);
+    draw_TextEdit(pinyin->edit, area);
+    return 0;
+}
+
+int handle_keyboard_pinyinInput(struct PinyinInput * pinyin, int c) {
+    struct textframe * text = pinyin->edit->text;
+
+    if (('a' <= c && c <= 'z') || c == BACKSPACE || c == ',' || c == '.') {
+        if (c == ',') {
+            if (pinyin->page > 0) -- pinyin->page;
+        } else if (c == '.') {
+            ++ pinyin->page;
+        } else {
+            pinyin->page = 0;
+            move_to_pos(text, 0, -1);
+            handle_keyboard_TextEdit(pinyin->edit, c);
+        }
+
+        move_to_pos(text, 1, -1);
+        clear_cur_line(text);
+        
+        for (int i = 0; i < ITEM_EVERY_PAGE; ++ i) {
+            char han[5];
+            han[0] = i+1 + '0';
+            han[1] = '.';
+            int r = get_pinyin_ith_han(text->data[0], pinyin->page * ITEM_EVERY_PAGE + i, han + 2, han + 3);
+            han[4] = 0;
+
+            if (r >= 0) {
+                // 在第二行显示中文
+                move_to_pos(text, 1, -1);           
+                for (int i = 0; i < 4; ++ i) {
+                    char c = han[i];
+                    putc_to_str(text, c);
+                    move_to_next_char(text);
+                }
+                move_to_pos(text, 0, -1);
+            }
+        }
+
+        return 0;
+    } else if ((c == ENTER || ('1' <= c && c <= '0' + ITEM_EVERY_PAGE)) && cursor_focus && cursor_focus_type == 1) {
+        struct textframe * target_text = ((struct TextEdit *) cursor_focus)->text;
+        
+        char han[3] = { 0 };
+        char * str_to_insert;
+
+        if (c == ENTER) {
+            str_to_insert = text->data[0];
+        } else {
+            int r = get_pinyin_ith_han(text->data[0], c - '0' - 1 + pinyin->page * ITEM_EVERY_PAGE, han, han + 1);
+            printf(0, "pinyin han exist r: %d\n", r);
+            han[2] = 0;
+            if (r == -1) {
+                return -1;
+            }
+            str_to_insert = han;
+        }
+        
+        int len = strlen(str_to_insert);
+
+        for (int i = 0; i < len; ++ i) {
+            char c = str_to_insert[i];
+            putc_to_str(target_text, c);
+            move_to_next_char(target_text);
+        }
+
+        LineEdit_set_str(text, "");
+        new_line_to_editor(text);
+        move_to_pos(text, 0, 0);
+
+        return 0;
+    } else {
+        return -1;
+    }
+}
+
+/*********************
+ * 
  * Main function. 
  * 
  *********************/
@@ -1222,12 +1344,13 @@ int Button_exec_tool(struct Button * button) {
 int main() {
     struct BufferManager *manager;
 
+    gbk_point_init();
+    char_point_init();
+    pinyin_init();
+
     make_BufferManager(& manager);
 
     DEBUG("----- [GUI] BUffer Manager Init Finished. -----\n");
-
-    gbk_point_init();
-    char_point_init();
 
     int msg = get_msg();
 
@@ -1247,6 +1370,7 @@ int main() {
             break;
 
         case KEYBOARD:
+            DEBUGDF("keyboard msg = %d\n",  msg);
             handle_keyboard_BufferManager(manager, msg & 0xffffff);
             break;
 
@@ -1256,7 +1380,7 @@ int main() {
 
         sleep(0);
         msg = get_msg();
-
+        
         if (msg == 0) {
             draw_BufferManager(manager, (struct Area) {0, 0, 800, 600, 0, 0});
             // drawgbk(20, 20, 16, 16, get_gbk_point_by_offset(247744));
