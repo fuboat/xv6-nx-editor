@@ -120,7 +120,7 @@ int draw_TextEdit(struct TextEdit *edit, struct Area parent_area) {
             if(edit->point1_row == edit->point2_row){
                 struct Area cursor_area_line;
                 //for (int i = 0; i < 10; ++ i) {
-                int wid = (edit->point2_col-edit->point1_col)*8;
+                int wid = (edit->point2_col-edit->point1_col + 1)*8;
                 int len = strlen(edit->text->data[edit->point1_row]);
                 if(edit->point1_col >= len){
                     edit->point1_col = len - 1 ;
@@ -724,8 +724,9 @@ int FileBuffer_save_file(struct FileBuffer * buffer, char * filepathname) {
     //DEBUG(filepathname);
     //DEBUG2("\ncontent:\n");
     //DEBUG2(buffer->edit->text->data[0]);
-    textframe_write(buffer->edit->text, "1.txt");
+    textframe_write(buffer->edit->text, "3.txt");
     textframe_write(buffer->edit->text, filepathname);
+    FileListBuffer_update_FileList(buffer->parent->parent->fileList);
     DEBUG2("\nfinish save\n");
     return 0;
 }
