@@ -120,23 +120,23 @@ int draw_TextEdit(struct TextEdit *edit, struct Area parent_area) {
             if(edit->point1_row == edit->point2_row){
                 struct Area cursor_area_line;
                 //for (int i = 0; i < 10; ++ i) {
-                    int wid = (edit->point2_col-edit->point1_col)*8;
-                    int len = strlen(edit->text->data[edit->point1_row]);
-                    if(edit->point1_col >= len){
-                        edit->point1_col = len - 1 ;
-                    }
-                    int res_len = 8*(len - edit->point1_col);
-                    if(wid > res_len){
-                        wid = res_len;
-                    }
-                    if (!wid){
-                        wid = 8;
-                    }
-                    DEBUG2("DRAWING: row:%d len:%d col:%d \n", edit->point1_row, strlen(edit->text->data[edit->point1_row]), edit->point1_col );
-                    cursor_area_line = calc_current_area(
-                        area,
-                        (struct Area) { edit->point1_col * 8, edit->point1_row * 16, wid, 16, 0, 0 }
-                    );
+                int wid = (edit->point2_col-edit->point1_col)*8;
+                int len = strlen(edit->text->data[edit->point1_row]);
+                if(edit->point1_col >= len){
+                    edit->point1_col = len - 1 ;
+                }
+                int res_len = 8*(len - edit->point1_col);
+                if(wid > res_len){
+                    wid = res_len;
+                }
+                if (!wid){
+                    wid = 8;
+                }
+                DEBUG2("DRAWING: row:%d len:%d col:%d \n", edit->point1_row, strlen(edit->text->data[edit->point1_row]), edit->point1_col );
+                cursor_area_line = calc_current_area(
+                    area,
+                    (struct Area) { edit->point1_col * 8, edit->point1_row * 16, wid, 16, 0, 0 }
+                );
                 //}
                 drawrect(
                     AREA_ARGS(cursor_area_line), 
@@ -214,6 +214,7 @@ int handle_mouse_TextEdit(struct TextEdit *edit, int x, int y, int mouse_opt) {
     mouse_pos_transform(edit->area, &x, &y);
 
     cursor_focus = edit;
+    move_to_pos(edit->text, y/16, x/8);
     if(mouse_opt == MOUSE_LEFT_PRESS){
         edit->point1_row = y/16;
         edit->point1_col = x/8;
