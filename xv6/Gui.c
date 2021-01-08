@@ -740,6 +740,10 @@ int handle_mouse_BufferManager(struct BufferManager* manager, int x, int y, int 
             rename_FileNameControl(manager->fileList->file_selected);
         }
     }
+    if(manager->fileSwitch->current){
+        manager->fileSwitch->current->edit->point2_col = -1;
+        manager->fileSwitch->current->edit->point2_row = -1;
+    }
     if (is_pos_in_area(manager->fileSwitch->area, x, y)) {
         DEBUG2("in switch\n");
         return handle_mouse_FileSwitchBar(manager->focus=manager->fileSwitch, x, y, mouse_opt);
