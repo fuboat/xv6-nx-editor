@@ -89,32 +89,32 @@ int draw_TextEdit(struct TextEdit *edit, struct Area parent_area) {
 
     // offset 的调整只尝试 10 次。
     if (edit == cursor_focus) {
-        if(edit->point2_col == -1){
-            for (int i = 0; i < 10; ++ i) {
+        
+        for (int i = 0; i < 10; ++ i) {
 
-                cursor_area = calc_current_area(
-                    area,
-                    (struct Area) { text->cursor_col * 8, text->cursor_row * 16, 1, 16, 0, 0 }
-                );
-
-                // 如果光标完全不可见，调整 offset，使得光标恰好在显示区域的最右下侧。
-                if (cursor_area.height <= 0 || cursor_area.width <= 0 || cursor_area.x < 0 || cursor_area.y < 0) {
-                    DEBUG("[GUI TextEdit] offset adjust for curser. because: cursor_area(width, height) = (%d,%d)\n", 
-                    cursor_area.width, cursor_area.height);
-                    edit->area.offset_x = max(0, text->cursor_col * 8 - area.width + 8);
-                    edit->area.offset_y = max(0, text->cursor_row * 16 - area.height + 16);
-                    area = calc_current_area(parent_area, edit->area);
-                    DEBUG("[GUI TextEdit] area change. (%d %d %d %d)\n", area.x, area.y, area.width, area.height);
-                } else {
-                    break;
-                }
-            }
-
-            drawrect(
-                AREA_ARGS(cursor_area), 
-                RGB(0x0, 0x0, 0x0)
+            cursor_area = calc_current_area(
+                area,
+                (struct Area) { text->cursor_col * 8, text->cursor_row * 16, 1, 16, 0, 0 }
             );
-       }
+
+            // 如果光标完全不可见，调整 offset，使得光标恰好在显示区域的最右下侧。
+            if (cursor_area.height <= 0 || cursor_area.width <= 0 || cursor_area.x < 0 || cursor_area.y < 0) {
+                DEBUG("[GUI TextEdit] offset adjust for curser. because: cursor_area(width, height) = (%d,%d)\n", 
+                cursor_area.width, cursor_area.height);
+                edit->area.offset_x = max(0, text->cursor_col * 8 - area.width + 8);
+                edit->area.offset_y = max(0, text->cursor_row * 16 - area.height + 16);
+                area = calc_current_area(parent_area, edit->area);
+                DEBUG("[GUI TextEdit] area change. (%d %d %d %d)\n", area.x, area.y, area.width, area.height);
+            } else {
+                break;
+            }
+        }
+
+        drawrect(
+            AREA_ARGS(cursor_area), 
+            RGB(0x0, 0x0, 0x0)
+        );
+       
         if(edit->point2_col != -1)
         {
             if(edit->point1_row == edit->point2_row){
@@ -261,31 +261,67 @@ int handle_keyboard_TextEdit(struct TextEdit *edit, int c) {
 
     switch (c) {
     case ENTER:
+        if(edit->point2_col != -1){
+            text = textframe_delete(text, edit->point1_row, edit->point1_col, 
+                                                edit->point2_row, edit->point2_col);
+            LineEdit_set_str(edit->text, "");
+            edit->text = text;
+            move_to_pos(text, edit->point1_row, edit->point1_col);
+            edit->point2_col = -1;
+            edit->point2_row = -1;
+        }
         new_line_to_editor(text);
         break;
 
-    case LEFT_ARROW: case BACKSPACE:
-        move_to_previous_char(text);
-
-        if (c == BACKSPACE) {
-            backspace_to_str(text);
+    case LEFT_ARROW: case BACKSPACE:{
+        if(edit->point2_col == -1){
+            move_to_previous_char(text);
+        }else{
+            move_to_pos(text, edit->point1_row, edit->point1_col);
         }
-
+        if (c == BACKSPACE) {
+            if(edit->point2_col == -1){
+                backspace_to_str(text);
+            }else{
+                text = textframe_delete(text, edit->point1_row, edit->point1_col, 
+                                              edit->point2_row, edit->point2_col);
+                LineEdit_set_str(edit->text, "");
+                edit->text = text;
+            }
+        }
+        edit->point2_col = -1;
+        edit->point2_row = -1;
         break;
-
+    }
     case RIGHT_ARROW:
+        if(edit->point2_col != -1){
+            move_to_pos(text, edit->point2_row, edit->point2_col);
+            edit->point2_col = -1;
+            edit->point2_row = -1;
+        }
         move_to_next_char(text);
         break;
-
     case UP_ARROW:
+        edit->point2_col = -1;
+        edit->point2_row = -1;
         move_to_last_line(text);
         break; 
     case DOWN_ARROW:
+        edit->point2_col = -1;
+        edit->point2_row = -1;
         move_to_next_line(text);
         break;
 
     default: {
         if (32 <= c && c <= 126) {
+            if(edit->point2_col != -1){
+                text  = (textframe_delete(text, edit->point1_row, edit->point1_col, edit->point2_row, edit->point2_col));
+                LineEdit_set_str(edit->text, "");
+                edit->text = text;
+                edit->point2_col = -1;
+                edit->point2_row = -1;
+                move_to_pos(text, edit->point1_row, edit->point1_col);
+            }
             putc_to_str(text, c);
             move_to_next_char(text);
         }
