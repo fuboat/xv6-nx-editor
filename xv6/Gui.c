@@ -649,13 +649,13 @@ int handle_mouse_BufferManager(struct BufferManager* manager, int x, int y, int 
             rename_FileNameControl(manager->fileList->file_selected);
         }
     }
-    if (is_pos_in_area(manager->fileList->area, x, y)) {
+    if (is_pos_in_area(manager->fileSwitch->area, x, y)) {
+        DEBUG2("in switch\n");
+        return handle_mouse_FileSwitchBar(manager->focus=manager->fileSwitch, x, y, mouse_opt);
+    } else if (is_pos_in_area(manager->fileList->area, x, y)) {
         DEBUG2("in filelist\n");
         // 如果点击了子部件，那么，焦点设在子部件上。
         return handle_mouse_FileListBuffer(manager->focus=manager->fileList, x, y, mouse_opt);
-    } else if (is_pos_in_area(manager->fileSwitch->area, x, y)) {
-        DEBUG2("in switch\n");
-        return handle_mouse_FileSwitchBar(manager->focus=manager->fileSwitch, x, y, mouse_opt);
     } else if (is_pos_in_area(manager->toolBar->area, x, y)) {
         DEBUG2("in toolbar\n");
         return handle_mouse_ToolBar(manager->focus=manager->toolBar, x, y, mouse_opt);
