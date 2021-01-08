@@ -89,32 +89,32 @@ int draw_TextEdit(struct TextEdit *edit, struct Area parent_area) {
 
     // offset 的调整只尝试 10 次。
     if (edit == cursor_focus) {
-    //     if(edit->point2_col == -1){
-    //         for (int i = 0; i < 10; ++ i) {
+        if(edit->point2_col == -1){
+            for (int i = 0; i < 10; ++ i) {
 
-    //             cursor_area = calc_current_area(
-    //                 area,
-    //                 (struct Area) { text->cursor_col * 8, text->cursor_row * 16, 8, 16, 0, 0 }
-    //             );
+                cursor_area = calc_current_area(
+                    area,
+                    (struct Area) { text->cursor_col * 8, text->cursor_row * 16, 1, 16, 0, 0 }
+                );
 
-    //             // 如果光标完全不可见，调整 offset，使得光标恰好在显示区域的最右下侧。
-    //             if (cursor_area.height <= 0 || cursor_area.width <= 0 || cursor_area.x < 0 || cursor_area.y < 0) {
-    //                 DEBUG("[GUI TextEdit] offset adjust for curser. because: cursor_area(width, height) = (%d,%d)\n", 
-    //                 cursor_area.width, cursor_area.height);
-    //                 edit->area.offset_x = max(0, text->cursor_col * 8 - area.width + 8);
-    //                 edit->area.offset_y = max(0, text->cursor_row * 16 - area.height + 16);
-    //                 area = calc_current_area(parent_area, edit->area);
-    //                 DEBUG("[GUI TextEdit] area change. (%d %d %d %d)\n", area.x, area.y, area.width, area.height);
-    //             } else {
-    //                 break;
-    //             }
-    //         }
+                // 如果光标完全不可见，调整 offset，使得光标恰好在显示区域的最右下侧。
+                if (cursor_area.height <= 0 || cursor_area.width <= 0 || cursor_area.x < 0 || cursor_area.y < 0) {
+                    DEBUG("[GUI TextEdit] offset adjust for curser. because: cursor_area(width, height) = (%d,%d)\n", 
+                    cursor_area.width, cursor_area.height);
+                    edit->area.offset_x = max(0, text->cursor_col * 8 - area.width + 8);
+                    edit->area.offset_y = max(0, text->cursor_row * 16 - area.height + 16);
+                    area = calc_current_area(parent_area, edit->area);
+                    DEBUG("[GUI TextEdit] area change. (%d %d %d %d)\n", area.x, area.y, area.width, area.height);
+                } else {
+                    break;
+                }
+            }
 
-    //         drawrect(
-    //             AREA_ARGS(cursor_area), 
-    //             RGB(0xa0, 0xa0, 0xa0)
-    //         );
-    //    }
+            drawrect(
+                AREA_ARGS(cursor_area), 
+                RGB(0x0, 0x0, 0x0)
+            );
+       }
         if(edit->point2_col != -1)
         {
             if(edit->point1_row == edit->point2_row){
@@ -221,20 +221,24 @@ int handle_mouse_TextEdit(struct TextEdit *edit, int x, int y, int mouse_opt) {
         edit->point2_row = -1;
         edit->point2_col = -1;
     }else if(mouse_opt == MOUSE_LEFT_RELEASE){
-        if(edit->point1_row > y/16 || (edit->point1_row == y/16 && edit->point1_col > x/8)){
-            edit->point2_col = edit->point1_col;
-            edit->point2_row = edit->point1_row;
-            edit->point1_col = x/8;
-            edit->point1_row = y/16;
+        if(edit->point1_row == y/16 && edit->point1_col == x/8){
+
         }else{
-            edit->point2_row = y/16;
-            edit->point2_col = x/8;
-        }
-        if(edit->point1_row >= edit->text->maxrow){
-            edit->point1_row = edit->text->maxrow - 1;
-        }
-        if(edit->point2_row >= edit->text->maxrow){
-            edit->point2_row = edit->text->maxrow - 1;
+            if(edit->point1_row > y/16 || (edit->point1_row == y/16 && edit->point1_col > x/8)){
+                edit->point2_col = edit->point1_col;
+                edit->point2_row = edit->point1_row;
+                edit->point1_col = x/8;
+                edit->point1_row = y/16;
+            }else{
+                edit->point2_row = y/16;
+                edit->point2_col = x/8;
+            }
+            if(edit->point1_row >= edit->text->maxrow){
+                edit->point1_row = edit->text->maxrow - 1;
+            }
+            if(edit->point2_row >= edit->text->maxrow){
+                edit->point2_row = edit->text->maxrow - 1;
+            }
         }
         //}
         // DEBUG2("[GUI3: TextEdit] mouse in TextEdit, pos1 = (%d, %d), pos2(%d, %d), type = %d\n", 
