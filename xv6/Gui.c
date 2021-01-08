@@ -935,6 +935,7 @@ int Button_exec_tool(struct Button * button) {
         return -1;
     }
     char* tool_name = button->edit->text->data[0];
+    struct ToolBar * toolbar = (struct ToolBar *) button->parent;
     if(!tool_name){
         return -1;
     }
@@ -942,12 +943,12 @@ int Button_exec_tool(struct Button * button) {
         DEBUGDF("\\\\\\ clicked new file botton ------\n");
         //To do
         // 新文件填入filelist 放在fileswitchbar末尾 显示untitled并调用重命名
+        open("New File", O_CREATE);
+        FileListBuffer_update_FileList(toolbar->parent->fileList);
     }else if(!strcmp(tool_name, "New Folder")){
         DEBUGDF("\\\\\\ clicked new folder botton ------\n");
         // 新目录填入filelist 显示untitled并调用重命名
-        DEBUGDF("%s\n", button->parent_type);
-        struct ToolBar * toolbar = (struct ToolBar *) button->parent;
-        int s = mkdir("untitled");
+        int s = mkdir("New Folder");
         DEBUGDF("mkdir: %d\n", s);
         FileListBuffer_update_FileList(toolbar->parent->fileList);
     }else if(!strcmp(tool_name, "save")){
