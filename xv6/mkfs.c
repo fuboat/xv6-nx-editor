@@ -13,14 +13,14 @@
 
 // #define static_assert(a, b) do { switch (0) case 0: case (a): ; } while (0)
 
-int nblocks = 985 + 1024;
+int nblocks = 985 + 1024  + 20480;
 int nlog = LOGSIZE;
 int ninodes = 200;
-int size = 2048;
+int size = 22533;
 
 int fsfd;
 struct superblock sb;
-char zeroes[512];
+char zeroes[BSIZE];
 uint freeblock;
 uint usedblocks;
 uint bitblocks;
@@ -63,7 +63,7 @@ main(int argc, char *argv[])
   int i, cc, fd;
   uint rootino, inum, off;
   struct dirent de;
-  char buf[512];
+  char buf[BSIZE];
   struct dinode din;
 
 
@@ -74,8 +74,8 @@ main(int argc, char *argv[])
     exit(1);
   }
 
-  assert((512 % sizeof(struct dinode)) == 0);
-  assert((512 % sizeof(struct dirent)) == 0);
+  assert((BSIZE % sizeof(struct dinode)) == 0);
+  assert((BSIZE % sizeof(struct dirent)) == 0);
 
   fsfd = open(argv[1], O_RDWR|O_CREAT|O_TRUNC, 0666);
   if(fsfd < 0){
@@ -88,7 +88,7 @@ main(int argc, char *argv[])
   sb.ninodes = xint(ninodes);
   sb.nlog = xint(nlog);
 
-  bitblocks = size/(512*8) + 1;
+  bitblocks = size/(BSIZE*8) + 1;
   usedblocks = ninodes / IPB + 3 + bitblocks;
   freeblock = usedblocks;
 
@@ -160,11 +160,11 @@ main(int argc, char *argv[])
 void
 wsect(uint sec, void *buf)
 {
-  if(lseek(fsfd, sec * 512L, 0) != sec * 512L){
+  if(lseek(fsfd, 1l * sec * BSIZE, 0) != 1l * sec * BSIZE){
     perror("lseek");
     exit(1);
   }
-  if(write(fsfd, buf, 512) != 512){
+  if(write(fsfd, buf, BSIZE) != BSIZE){
     perror("write");
     exit(1);
   }
@@ -179,7 +179,7 @@ i2b(uint inum)
 void
 winode(uint inum, struct dinode *ip)
 {
-  char buf[512];
+  char buf[BSIZE];
   uint bn;
   struct dinode *dip;
 
@@ -193,7 +193,7 @@ winode(uint inum, struct dinode *ip)
 void
 rinode(uint inum, struct dinode *ip)
 {
-  char buf[512];
+  char buf[BSIZE];
   uint bn;
   struct dinode *dip;
 
@@ -206,11 +206,11 @@ rinode(uint inum, struct dinode *ip)
 void
 rsect(uint sec, void *buf)
 {
-  if(lseek(fsfd, sec * 512L, 0) != sec * 512L){
+  if(lseek(fsfd, 1l * sec * BSIZE, 0) != 1l * sec * BSIZE){
     perror("lseek");
     exit(1);
   }
-  if(read(fsfd, buf, 512) != 512){
+  if(read(fsfd, buf, BSIZE) != BSIZE){
     perror("read");
     exit(1);
   }
@@ -233,12 +233,12 @@ ialloc(ushort type)
 void
 balloc(int used)
 {
-  uchar buf[512];
+  uchar buf[BSIZE];
   int i;
 
   printf("balloc: first %d blocks have been allocated\n", used);
-  assert(used < 512*8);
-  bzero(buf, 512);
+  assert(used < BSIZE*8);
+  bzero(buf, BSIZE);
   for(i = 0; i < used; i++){
     buf[i/8] = buf[i/8] | (0x1 << (i%8));
   }
@@ -254,7 +254,7 @@ iappend(uint inum, void *xp, int n)
   char *p = (char*)xp;
   uint fbn, off, n1;
   struct dinode din;
-  char buf[512];
+  char buf[BSIZE];
   uint indirect[NINDIRECT];
   uint x;
 
@@ -262,7 +262,7 @@ iappend(uint inum, void *xp, int n)
 
   off = xint(din.size);
   while(n > 0){
-    fbn = off / 512;
+    fbn = off / BSIZE;
     assert(fbn < MAXFILE);
     if(fbn < NDIRECT){
       if(xint(din.addrs[fbn]) == 0){
@@ -285,9 +285,9 @@ iappend(uint inum, void *xp, int n)
       }
       x = xint(indirect[fbn-NDIRECT]);
     }
-    n1 = min(n, (fbn + 1) * 512 - off);
+    n1 = min(n, (fbn + 1) * BSIZE - off);
     rsect(x, buf);
-    bcopy(p, buf + off - (fbn * 512), n1);
+    bcopy(p, buf + off - (fbn * BSIZE), n1);
     wsect(x, buf);
     n -= n1;
     off += n1;
