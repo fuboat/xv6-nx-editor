@@ -23,6 +23,8 @@ struct TextEdit {
     struct Area area; 
     struct textframe* text;
     void * parent;
+    int point1_row, point1_col; //第一个点的位置
+    int point2_row, point2_col; //第二个点的位置
     char * parent_type; /* "FileListBuffer" */
 };
 
