@@ -334,22 +334,20 @@ int handle_keyboard_TextEdit(struct TextEdit *edit, int c) {
             if(clip){
                 LineEdit_set_str(clip, "");
             }
-            clip = textframe_extract(text, edit->point1_row, edit->point1_col, 
+            pFile->parent->parent->clipBoard = textframe_extract(text, edit->point1_row, edit->point1_col, 
                                                 edit->point2_row, edit->point2_col);
-            DEBUG2("in ctrlc222 %d %d %d %d\n",edit->point1_row, edit->point1_col, 
-                                                edit->point2_row, edit->point2_col);
-            if(text->data[0]){
-                DEBUG2("in ctrlc 11\n");
-                DEBUG2(text->data[0]);
-            }
         }
         break;
-    case CTRL_V:
-        DEBUG2("in ctrlv \n");
-        if(text->data[0]){
-            DEBUG2("in ctrlv 11\n");
-            DEBUG2(text->data[0]);
+    case CTRL_V:{
+        struct FileBuffer* pFile = (struct FileBuffer*)(edit->parent);
+        if(!pFile){
+            break;
         }
+        struct textframe* clip = pFile->parent->parent->clipBoard;
+        if(!clip){
+            break;
+        }
+        DEBUG2("in ctrlv \n");
         if(edit->point2_col != -1){
             text  = (textframe_delete(text, edit->point1_row, edit->point1_col, edit->point2_row, edit->point2_col));
             LineEdit_set_str(edit->text, "");
@@ -358,12 +356,16 @@ int handle_keyboard_TextEdit(struct TextEdit *edit, int c) {
             edit->point2_row = -1;
             move_to_pos(text, edit->point1_row, edit->point1_col);
         }
-        struct FileBuffer* pFile = (struct FileBuffer*)(edit->parent);
-        if(!pFile){
-            break;
-        }
-        text = textframe_insert(text, pFile->parent->parent->clipBoard, edit->point1_row,edit->point1_col);
+        DEBUG2("clip");
+        DEBUG2(clip->data[0]);
+        int start_row = text->cursor_row, start_col = text->cursor_col;
+        DEBUG2("LALALA2: %d %d:\n", start_row,start_col);
+        text = textframe_insert(text, clip, start_row, start_col);
+        LineEdit_set_str(edit->text, "");
+        edit->text = text;
+        // 计算粘贴后的光标位置
         break;
+    }
     default: {
         if (32 <= c && c <= 126) {
             if(edit->point2_col != -1){
