@@ -26,3 +26,4 @@
 #define SYS_update  24
 #define SYS_get_msg 25
 #define SYS_addcomand_c 27
+#define SYS_drawgbk 28

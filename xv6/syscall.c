@@ -104,6 +104,7 @@ extern int sys_get_msg(void);
 extern int sys_update(void);
 extern int sys_drawarea_short(void);
 extern int sys_addcomand_c(void);
+extern int sys_drawgbk(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -132,6 +133,7 @@ static int (*syscalls[])(void) = {
 [SYS_get_msg] sys_get_msg,
 [SYS_update]  sys_update,
 [SYS_drawarea_short] sys_drawarea_short,
+[SYS_drawgbk] sys_drawgbk,
 };
 
 void

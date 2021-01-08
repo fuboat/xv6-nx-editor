@@ -25,6 +25,7 @@ int uptime(void);
 int drawrect(int xl, int yl, int width, int height, int color);
 int drawarea(int xl, int yl, int width, int height, int *colors);
 int drawarea_short(int xl, int yl, int width, int height, unsigned short *colors);
+int drawgbk(int xl, int yl, int width, int height, char * gbk);
 int update();
 int get_msg(void);
 

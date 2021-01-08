@@ -192,18 +192,26 @@ int draw_TextEdit(struct TextEdit *edit, struct Area parent_area) {
         int len = strlen(text->data[r]);
         for (int col = 0; col < len; ++ col) {
             // 枚举所有的字符
-            char c = text->data[r][col];
+            unsigned char c = text->data[r][col];
 
-            // 该字符对应在屏幕上的 area
-            struct Area c_area = calc_current_area(area, (struct Area) { col * 8, r * 16, 8, 16, 0, 0 });
+            int is_han = (c >= 160 && col + 1 < len && (unsigned char) text->data[r][col+1] >= 160);
+            int width = is_han? 16 : 8;
+
+            struct Area c_area = calc_current_area(area, (struct Area) { col * 8, r * 16, width, 16, 0, 0 });
 
             // 只有在能够完整绘制的时候才进行绘制
-            if (c_area.x >= 0 && c_area.y >= 0 && c_area.width == 8 && c_area.height == 16) 
+            if (c_area.x >= 0 && c_area.y >= 0 && c_area.width == width && c_area.height == 16) 
             {
-                drawarea(
-                    AREA_ARGS(c_area), 
-                    get_text_area(c));
+                if (is_han) {
+                    drawgbk(AREA_ARGS(c_area), get_gbk_point_by_c1_c2(c, (unsigned char) text->data[r][col + 1]));
+                } else {
+                    drawarea(
+                        AREA_ARGS(c_area), 
+                        get_text_area(c));
+                }
             }
+
+            if (is_han) ++ col;
         }
     }
 
@@ -526,7 +534,7 @@ int handle_keyboard_LineEdit(struct LineEdit *edit, int c) {
 
 int make_FileListBuffer(struct FileListBuffer ** pbuffer, struct BufferManager * parent) {
     struct FileListBuffer * buffer = malloc(sizeof (struct FileListBuffer));
-    buffer->area = (struct Area) { 10, 100, 150, 500, 0, 0 };
+    buffer->area = (struct Area) { 10, 30, 150, 570, 0, 0 };
     buffer->n_files = 0;
     buffer->files = malloc(sizeof(struct FileNameControl *) * 0);
     buffer->file_selected = 0;
@@ -1180,6 +1188,7 @@ int main() {
 
     DEBUG("----- [GUI] BUffer Manager Init Finished. -----\n");
 
+    gbk_point_init();
     char_point_init();
 
     int msg = get_msg();
@@ -1207,10 +1216,12 @@ int main() {
             break;
         }
 
+        sleep(0);
         msg = get_msg();
 
         if (msg == 0) {
             draw_BufferManager(manager, (struct Area) {0, 0, 800, 600, 0, 0});
+            // drawgbk(20, 20, 16, 16, get_gbk_point_by_offset(247744));
             update();
             
             do {
