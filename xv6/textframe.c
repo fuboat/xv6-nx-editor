@@ -211,7 +211,7 @@ struct textframe *textframe_extract(struct textframe *text, int start_row, int s
     }
     res_text->maxrow = max_row;
     res_text->data = (char **)malloc(sizeof(char *) * max_row);
-    int start_line = start_row;
+    // int start_line = start_row;
     if (start_col < 0)
     {
         start_col = 0;
@@ -734,6 +734,8 @@ void new_line_to_editor(struct textframe *text)
 
 void move_to_pos(struct textframe *text, int r, int c)
 {
+    if (r == -1) r = 0x7fffffff;
+    if (c == -1) c = 0x7fffffff;
     if (r >= text->maxrow)
         r = text->maxrow - 1;
     if (r >= 0 && c > strlen(text->data[r]))
@@ -763,4 +765,13 @@ void LineEdit_set_str(struct textframe *text, char *str)
     text->data[0] = malloc(strlen(str) + 1);
     strcpy(text->data[0], str);
     text->maxrow_capacity = text->maxrow = 1;
+}
+
+void clear_cur_line(struct textframe *text) {
+    if (0 <= text->cursor_row && text->cursor_row < text->maxrow) {
+        free(text->data[text->cursor_row]);
+        text->data[text->cursor_row] = malloc(1);
+        text->data[text->cursor_row][0] = 0;
+        text->cursor_col = 0;
+    }
 }

@@ -16,7 +16,7 @@
 int nblocks = 985 + 1024  + 2048;
 int nlog = LOGSIZE;
 int ninodes = 200;
-int size = 4097;
+int size = 4272;
 
 int fsfd;
 struct superblock sb;
@@ -263,6 +263,9 @@ iappend(uint inum, void *xp, int n)
   off = xint(din.size);
   while(n > 0){
     fbn = off / BSIZE;
+    if (fbn >= MAXFILE) {
+      printf("fbn = %u MAXFILE = %lu\n", fbn, MAXFILE);
+    }
     assert(fbn < MAXFILE);
     if(fbn < NDIRECT){
       if(xint(din.addrs[fbn]) == 0){
