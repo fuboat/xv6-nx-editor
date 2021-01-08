@@ -724,7 +724,7 @@ int FileBuffer_save_file(struct FileBuffer * buffer, char * filepathname) {
     //DEBUG(filepathname);
     //DEBUG2("\ncontent:\n");
     //DEBUG2(buffer->edit->text->data[0]);
-    textframe_write(buffer->edit->text, "3.txt");
+    textframe_write(buffer->edit->text, "1.txt");
     textframe_write(buffer->edit->text, filepathname);
     FileListBuffer_update_FileList(buffer->parent->parent->fileList);
     DEBUG2("\nfinish save\n");
@@ -835,7 +835,6 @@ int make_Button(struct Button ** pbutton, void * parent, char * parent_type) {
 
 int draw_Button(struct Button * button, struct Area area) {
     area = calc_current_area(area, button->area);
-
     return draw_LineEdit(button->edit, area);
 }
 
@@ -1102,11 +1101,7 @@ int Button_exec_tool(struct Button * button) {
         if(strcmp(button->parent_type, "ToolBar")){
             return -1;
         }
-        struct ToolBar* pToolBar = (struct ToolBar*) button->parent;
-        if(!pToolBar){
-            return -1;
-        }
-        struct FileBuffer * cur = pToolBar->parent->fileSwitch->current;
+        struct FileBuffer * cur = toolbar->parent->fileSwitch->current;
         if(cur){
             DEBUG("saving\n\n");
             FileBuffer_save_file(cur, cur->filepathname);
