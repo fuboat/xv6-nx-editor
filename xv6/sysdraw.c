@@ -89,6 +89,28 @@ int drawarea(int xl, int yl, int width, int height, int *colors) {
     return 0;
 }
 
+int drawgbk(int xl, int yl, int width, int height, char * gbk) {
+    int n = 0;
+
+    int i, j, k;
+    for (i = 0; i < 16; i++) // 16x16点阵汉字
+        for (j = 0; j < 2; j++)
+            for (k = 0; k < 8; k++) {
+                if (gbk[i * 2 + j] & (0x80 >> k)) {
+                    set_color(xl + n % width, yl + n / width, 0);
+                    // cprintf(".");
+                }
+                // } else {
+                //     cprintf(" ");
+                // }
+                ++ n;
+                // if (n % 8 == 0) {
+                //     cprintf("\n");
+                // }
+            }
+    
+    return 0;
+}
 
 int drawarea_short(int xl, int yl, int width, int height, ushort *colors) {
     if (xl == 0 && yl == 0 && width == 800 && height == 600) {
@@ -134,6 +156,23 @@ int sys_drawarea_short(void) {
     }
 
     drawarea_short(xl, yl, width, height, colors);
+
+    return 0;
+}
+
+int sys_drawgbk(void) {
+    int xl, yl, width, height;
+    char * gbk;
+
+    if (argint(0, &xl) < 0 ||
+    argint(1, &yl) < 0 ||
+    argint(2, &width) < 0 ||
+    argint(3, &height) < 0 ||
+    argptr(4, (void*) &gbk, sizeof(char) * 32) < 0) {
+        return -1;
+    }
+
+    drawgbk(xl, yl, width, height, gbk);
 
     return 0;
 }

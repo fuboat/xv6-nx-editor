@@ -482,7 +482,7 @@ int textframe_write(struct textframe *text, char *filename)
     // DEBUG("start write file\n");
     int fd = 0; //文件描述符
     printf(1, "textframe write start\n");
-    fd = open(filename, O_CREATE | O_RDWR);
+    fd = open(filename, O_CREATE | O_WRONLY);
     if (fd < 0)
     //if (!fd)
     {
@@ -786,7 +786,7 @@ void putc_to_str(struct textframe * text, int ch) {
     for (int i = len + 1; i > text->cursor_col; -- i)
         new_s[i] = new_s[i - 1];
     new_s[text->cursor_col] = ch;
-    new_s[len+1] = 0;
+    new_s[len + 1] = 0;
     free(*s);
     *s = new_s;
 }
