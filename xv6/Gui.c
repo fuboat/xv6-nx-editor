@@ -268,6 +268,10 @@ int handle_mouse_TextEdit(struct TextEdit *edit, int x, int y, int mouse_opt) {
 #define RIGHT_ARROW 229
 #define UP_ARROW    226
 #define DOWN_ARROW  227
+#define CTRL_S 19
+#define TAB 9
+#define CTRL_C 3
+#define CTRL_V 22
 
 int handle_keyboard_TextEdit(struct TextEdit *edit, int c) {
     struct textframe *text = edit->text;
@@ -324,7 +328,49 @@ int handle_keyboard_TextEdit(struct TextEdit *edit, int c) {
         edit->point2_row = -1;
         move_to_next_line(text);
         break;
-
+    case CTRL_C:
+        DEBUG2("in ctrlc\n");
+        if(edit->point2_col != -1){
+            struct FileBuffer* pFile = (struct FileBuffer*)(edit->parent);
+            if(!pFile){
+                break;
+            }
+            struct textframe* clip = pFile->parent->parent->clipBoard;
+            if(clip){
+                LineEdit_set_str(clip, "");
+            }
+            pFile->parent->parent->clipBoard = textframe_extract(text, edit->point1_row, edit->point1_col, 
+                                                edit->point2_row, edit->point2_col);
+        }
+        break;
+    case CTRL_V:{
+        struct FileBuffer* pFile = (struct FileBuffer*)(edit->parent);
+        if(!pFile){
+            break;
+        }
+        struct textframe* clip = pFile->parent->parent->clipBoard;
+        if(!clip){
+            break;
+        }
+        DEBUG2("in ctrlv \n");
+        if(edit->point2_col != -1){
+            text  = (textframe_delete(text, edit->point1_row, edit->point1_col, edit->point2_row, edit->point2_col));
+            LineEdit_set_str(edit->text, "");
+            edit->text = text;
+            edit->point2_col = -1;
+            edit->point2_row = -1;
+            move_to_pos(text, edit->point1_row, edit->point1_col);
+        }
+        DEBUG2("clip");
+        DEBUG2(clip->data[0]);
+        int start_row = text->cursor_row, start_col = text->cursor_col;
+        DEBUG2("LALALA2: %d %d:\n", start_row,start_col);
+        text = textframe_insert(text, clip, start_row, start_col);
+        LineEdit_set_str(edit->text, "");
+        edit->text = text;
+        // 计算粘贴后的光标位置
+        break;
+    }
     default: {
         if (32 <= c && c <= 126) {
             if(edit->point2_col != -1){
@@ -717,13 +763,15 @@ int handle_mouse_FileBuffer(struct FileBuffer * buffer, int x, int y, int mouse_
 }
 
 int handle_keyboard_FileBuffer(struct FileBuffer * buffer, int c) {
+    struct textframe *text = buffer->edit->text;
     switch (c)
     {
-    // TODO: 一些针对文件的快捷键的拦截，例如 Ctrl + S
-
-    default:
-        return handle_keyboard_TextEdit(buffer->edit, c);
-        break;
+        case CTRL_S:
+            FileBuffer_save_file(buffer, buffer->filepathname);
+            break;
+        default:
+            return handle_keyboard_TextEdit(buffer->edit, c);
+            break;
     }
 }
 
@@ -761,6 +809,7 @@ int make_BufferManager(struct BufferManager ** pmanager) {
     make_FileListBuffer(& manager->fileList, manager);
     // manager->file = 0;
     // make_FileBuffer(& manager->file, manager);
+    manager->clipBoard = 0;
     make_FileSwitchBar(& manager->fileSwitch, manager);
     make_ToolBar(& manager->toolBar, manager);
     make_pinyinInput(& manager->pinyin, manager);
@@ -820,7 +869,7 @@ int handle_mouse_BufferManager(struct BufferManager* manager, int x, int y, int 
 int handle_keyboard_BufferManager(struct BufferManager * manager, int c) {
     // 根据焦点判断由哪一部件接收键盘输入
     // 当输入法启用且输入的内容为 a-z 的字母时，或数字时，控制权移交到输入法
-
+    DEBUG2("key bord: %d\n", c);
     if(c == CTRL_P) {
         manager->pinyin->on ^= 1;
         printf(0, "is pinyin on: %d\n", manager->pinyin->on);
@@ -997,12 +1046,16 @@ int handle_mouse_FileSwitchBar(struct FileSwitchBar * fileSwitch, int x, int y, 
 int handle_keyboard_FileSwitchBar(struct FileSwitchBar * fileSwitch, int c) {
     switch (c)
     {
-        // TODO: 一些快捷键的接收，例如 Alt+Tab 切换标签页
-    
-    default:
-        if (fileSwitch->current)
+        case TAB:
+            FileSwitchBar_handle_tab(fileSwitch);
+            break;
+        case CTRL_C:case CTRL_S:case CTRL_V:
             return handle_keyboard_FileBuffer(fileSwitch->current, c);
-        break;
+            break;
+        default:
+            if (fileSwitch->current)
+                return handle_keyboard_FileBuffer(fileSwitch->current, c);
+            break;
     }
 
     return 0;
@@ -1301,4 +1354,17 @@ int main() {
             } while (!msg);
         }
     }
+}
+
+int FileSwitchBar_handle_tab(struct FileSwitchBar * fileswitch){
+    if(!fileswitch){
+        return -1;
+    }
+    for (int i = 0; i < fileswitch->n_files; ++ i) {
+        if (fileswitch->files[i] == fileswitch->current) {
+            fileswitch->current = fileswitch->files[(i+1)%fileswitch->n_files];
+            return 0;
+        }
+    }
+    return -1;
 }

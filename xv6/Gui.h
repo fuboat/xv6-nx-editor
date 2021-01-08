@@ -56,6 +56,7 @@ struct BufferManager {
     struct ToolBar * toolBar;
     struct PinyinInput * pinyin;
     void * focus;
+    struct textframe* clipBoard;
 };
 
 struct FileBuffer {
@@ -161,6 +162,7 @@ int handle_keyboard_FileSwitchBar(struct FileSwitchBar *, int c);
 int FileSwitchBar_open_file(struct FileSwitchBar * fileSwitch, char * filename);
 int FileSwitchBar_save_file(struct FileSwitchBar * fileSwitch, char * filename);
 int FileSwitchBar_find_file(struct FileSwitchBar * fileswitch, char * filename);
+int FileSwitchBar_handle_tab(struct FileSwitchBar * fileswitch);
 
 int make_ToolBar(struct ToolBar **, struct BufferManager* parent);
 int draw_ToolBar(struct ToolBar *, struct Area area);
