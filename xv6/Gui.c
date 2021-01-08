@@ -414,7 +414,7 @@ fmtname(char *path)
 
 int FileListBuffer_update_FileList(struct FileListBuffer * buffer) {
     char * path = buffer->path;
-    DEBUGDF("file_path: %s", path);
+    DEBUGDF("file_path: %s\n", path);
     char buf[512];
 
     int fd = open(path, 0);
@@ -574,17 +574,7 @@ int handle_keyboard_FileBuffer(struct FileBuffer * buffer, int c) {
 int FileBuffer_open_file(struct FileBuffer * buffer, char * filepathname) {
     strcpy(buffer->filepathname, filepathname);
     // textframe_write(buffer->edit->text, "1.txt");
-    int file_type = File_isDir(filepathname);
-    if(file_type == 0){
-        textframe_read(buffer->edit->text, filepathname);
-    }
-    else
-    {
-        //To do 释放之前的变量?
-        // make_FileListBuffer();
-        // FileListBuffer_update_FileList();
-    }
-    
+    textframe_read(buffer->edit->text, filepathname);
     return 0;
 }
 
@@ -861,7 +851,18 @@ int FileSwitchBar_open_file(struct FileSwitchBar * fileSwitch, char * filename) 
         fileSwitch->current = fileSwitch->files[fileSwitch->n_files];
         fileSwitch->n_files ++;
         return 0;
-    } else {
+    }
+    // 文件夹进入
+    else if (File_isDir(filename) == 1) {
+        //To do 释放之前的变量
+        char * filepath = strcat(filename, "/", strlen(filename), 1);
+        DEBUGDF("AAA%s\n", filepath);
+        DEBUGDF("old_path: %s, %d, %d\n", fileSwitch->parent->fileList->path, strlen(fileSwitch->parent->fileList->path), strlen(filepath));
+        strcpy(fileSwitch->parent->fileList->path + strlen(fileSwitch->parent->fileList->path), filepath);
+        free(filepath);
+        FileListBuffer_update_FileList(fileSwitch->parent->fileList);
+    } 
+    else {
         return -1;
     }
 }
@@ -944,6 +945,11 @@ int Button_exec_tool(struct Button * button) {
     }else if(!strcmp(tool_name, "New Folder")){
         DEBUGDF("\\\\\\ clicked new folder botton ------\n");
         // 新目录填入filelist 显示untitled并调用重命名
+        DEBUGDF("%s\n", button->parent_type);
+        struct ToolBar * toolbar = (struct ToolBar *) button->parent;
+        int s = mkdir("untitled");
+        DEBUGDF("mkdir: %d\n", s);
+        FileListBuffer_update_FileList(toolbar->parent->fileList);
     }else if(!strcmp(tool_name, "save")){
         DEBUGDF("\\\\\\ clicked save botton ------\n");
         if(strcmp(button->parent_type, "ToolBar")){
