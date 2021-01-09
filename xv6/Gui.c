@@ -1287,7 +1287,6 @@ int Button_exec_tool(struct Button * button) {
         DEBUGDF("mkdir: %d\n", s);
         free(fullpath);
         FileListBuffer_update_FileList(toolbar->parent->fileList);
-        free(fullpath);
     }else if(!strcmp(tool_name, "save")){
         DEBUGDF("\\\\\\ clicked save botton ------\n");
         if(strcmp(button->parent_type, "ToolBar")){
