@@ -721,14 +721,18 @@ int handle_keyboard_FileNameControl(struct FileNameControl * control, int c) {
 
 int rename_FileNameControl(struct FileNameControl * control){
     isRename = 0;
-    if(strcpy(control->edit->text->data[0], control->oldName)){
+    if(strcmp(control->edit->text->data[0], control->oldName)){
         //rename(control->oldName, control->edit->text->data[0]);
-        DEBUG2("rename finish\n");
+        DEBUGDF("old: %s,new: %s\n", control->oldName, control->edit->text->data[0]);
     }else{
         DEBUG2("no change finish\n");
     }
     return 0;
 }
+
+
+
+
 
 /**************************
  * 
@@ -787,7 +791,7 @@ int FileBuffer_save_file(struct FileBuffer * buffer, char * filepathname) {
     //DEBUG(filepathname);
     //DEBUG2("\ncontent:\n");
     //DEBUG2(buffer->edit->text->data[0]);
-    textframe_write(buffer->edit->text, "1.txt");
+    // textframe_write(buffer->edit->text, "1.txt");
     textframe_write(buffer->edit->text, filepathname);
     FileListBuffer_update_FileList(buffer->parent->parent->fileList);
     DEBUG2("\nfinish save\n");
@@ -1080,11 +1084,41 @@ int FileSwitchBar_open_file(struct FileSwitchBar * fileSwitch, char * filename) 
     // 文件夹进入
     else if (File_isDir(filename) == 1) {
         //To do 释放之前的变量
-        char * filepath = strcat(filename, "/", strlen(filename), 1);
-        DEBUGDF("AAA%s\n", filepath);
-        DEBUGDF("old_path: %s, %d, %d\n", fileSwitch->parent->fileList->path, strlen(fileSwitch->parent->fileList->path), strlen(filepath));
-        strcpy(fileSwitch->parent->fileList->path + strlen(fileSwitch->parent->fileList->path), filepath);
-        free(filepath);
+        char * filepath = fileSwitch->parent->fileList->path;
+        char * lastpath = (char *)malloc(strlen(filepath) + 2);
+        memset(lastpath, 0, sizeof(char *) * (strlen(filepath) + 2));
+        int pos = -1;
+        if (strcmp(filename, "..") == 0){
+            if (strcmp(fileSwitch->parent->fileList->path, "") == 0){
+                return 0;
+            }
+            for (int i = 0; i < strlen(filepath) - 1; i++){
+                if(filepath[i] == '/'){
+                    pos = i;
+                }
+            }
+            for (int i = 0; i <= pos; i++) {
+                lastpath += filepath[i];
+            }
+            if (pos == -1) {
+                strcpy(lastpath, "");
+            }
+            DEBUGDF("lastpath: %s\n", lastpath);
+            strcpy(fileSwitch->parent->fileList->path, lastpath);
+            free(filepath);
+            free(lastpath);
+            // int a = chdir(fileSwitch->parent->fileList->path);
+            // DEBUGDF("..chdir: %d\n", a);
+        }
+        else{
+            char * filepath = strcat(filename, "/", strlen(filename), 1);
+            strcpy(fileSwitch->parent->fileList->path + strlen(fileSwitch->parent->fileList->path), filepath);
+            free(filepath);
+            FileListBuffer_update_FileList(fileSwitch->parent->fileList);
+            // 切换工作目录
+            // int a = chdir(fileSwitch->parent->fileList->path);
+            // DEBUGDF("chdir: %d\n", a);
+        }
         FileListBuffer_update_FileList(fileSwitch->parent->fileList);
         return 0;
     } 
@@ -1169,12 +1203,19 @@ int Button_exec_tool(struct Button * button) {
         DEBUGDF("\\\\\\ clicked new file botton ------\n");
         //To do
         // 新文件填入filelist 放在fileswitchbar末尾 显示untitled并调用重命名
-        open("New File", O_CREATE);
+        char * pathname = toolbar->parent->fileList->path;
+        char * fullfilename = strcat(pathname, "New File", strlen(pathname), strlen("New File"));
+        if (open(fullfilename, O_CREATE) < 0){
+            DEBUGDF("createFile Fail!\n");
+        }
         FileListBuffer_update_FileList(toolbar->parent->fileList);
     }else if(!strcmp(tool_name, "New Folder")){
         DEBUGDF("\\\\\\ clicked new folder botton ------\n");
         // 新目录填入filelist 显示untitled并调用重命名
-        int s = mkdir("New Folder");
+        char * pathname = toolbar->parent->fileList->path;
+        DEBUGDF("mkdirpath: %s\n", toolbar->parent->fileList->path);
+        char * fullpath = strcat(pathname, "New Folder", strlen(pathname), strlen("New Folder"));
+        int s = mkdir(fullpath);
         DEBUGDF("mkdir: %d\n", s);
         FileListBuffer_update_FileList(toolbar->parent->fileList);
     }else if(!strcmp(tool_name, "save")){
