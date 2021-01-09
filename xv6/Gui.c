@@ -79,10 +79,10 @@ int draw_TextEdit(struct TextEdit *edit, struct Area parent_area) {
 
     struct Area area = calc_current_area(parent_area, edit->area);
 
-    DEBUG("[GUI TextEdit] draw text edit, %d %d %d %d (offset x y) = (%d %d)\n", area.x, area.y, area.width, area.height, area.offset_x, area.offset_y);
+    DEBUGDF("[GUI TextEdit] draw text edit, %d %d %d %d (offset x y) = (%d %d)\n", area.x, area.y, area.width, area.height, area.offset_x, area.offset_y);
 
     // 绘制背景
-    drawrect(AREA_ARGS(area), 59196);
+    drawrect(AREA_ARGS(area), 131071);
 
     // 绘制光标
     /*****
@@ -444,7 +444,7 @@ int draw_LineEdit(struct LineEdit *edit, struct Area parent_area) {
     DEBUG("[GUI LineEdit] draw line edit, %d %d %d %d\n", area.x, area.y, area.width, area.height);
 
     // 绘制背景
-    drawrect(AREA_ARGS(area), 59196);
+    drawrect(AREA_ARGS(area), 131071);
 
     // 绘制光标
     /*****
@@ -777,10 +777,10 @@ int make_FileBuffer(struct FileBuffer ** pbuffer, struct FileSwitchBar * parent)
     struct FileBuffer * buffer = malloc(sizeof(struct FileBuffer));
     memset(buffer, 0, sizeof(struct FileBuffer));
 
-    buffer->area = (struct Area) { 0, 20, 700, 200, 0, 0 };
+    buffer->area = (struct Area) { 0, 20, 700, 400, 0, 0 };
     make_TextEdit(& buffer->edit, buffer, "FileBuffer");
     buffer->parent = parent;
-    buffer->edit->area = (struct Area) { 0, 0, 700, 200, 0, 0 };
+    buffer->edit->area = (struct Area) { 0, 0, 700, 400, 0, 0 };
     
     memset(buffer->filepathname, 0, sizeof(buffer->filepathname));
 
@@ -1039,7 +1039,7 @@ int free_Button(struct Button ** button){
 int make_FileSwitchBar(struct FileSwitchBar **pfileSwitch, struct BufferManager * parent) {
     struct FileSwitchBar * fileSwitch = malloc(sizeof(struct FileSwitchBar));
     
-    fileSwitch->area = (struct Area) { 100, 30, 700, 400, 0, 0 };
+    fileSwitch->area = (struct Area) { 115, 30, 700, 700, 0, 0 };
 
     memset(fileSwitch->buttons, 0, sizeof(fileSwitch->buttons));
     memset(fileSwitch->files, 0, sizeof(fileSwitch->files));
@@ -1305,7 +1305,7 @@ int Button_exec_tool(struct Button * button) {
 int make_pinyinInput(struct PinyinInput ** pPinyin, struct BufferManager * parent) {
     struct PinyinInput * pinyin = malloc(sizeof(struct PinyinInput));
     
-    pinyin->area = (struct Area) { 400, 400, 200, 32, 0, 0 };
+    pinyin->area = (struct Area) { 600, 548, 200, 32, 0, 0 };
     pinyin->page = 0;
     pinyin->on = 0;
     make_TextEdit(& pinyin->edit, parent, "pinyinInput");
@@ -1320,11 +1320,161 @@ int make_pinyinInput(struct PinyinInput ** pPinyin, struct BufferManager * paren
     return 0;
 }
 
-int draw_pinyinInput(struct PinyinInput * pinyin, struct Area area) {
-    area = calc_current_area(area, pinyin->area);
-    draw_TextEdit(pinyin->edit, area);
+
+int draw_pinyinEdit(struct TextEdit *edit, struct Area parent_area) {
+    struct textframe * text = edit->text;
+
+    struct Area area = calc_current_area(parent_area, edit->area);
+
+    DEBUGDF("[GUI TextEdit] draw text edit, %d %d %d %d (offset x y) = (%d %d)\n", area.x, area.y, area.width, area.height, area.offset_x, area.offset_y);
+
+    // 绘制背景
+    drawrect(AREA_ARGS(area), 59196);
+
+    // 绘制光标
+    /*****
+     * 根据光标调整 offset.
+     *****/
+    struct Area cursor_area;
+
+    // offset 的调整只尝试 10 次。
+    if (edit == cursor_focus) {
+        
+        for (int i = 0; i < 10; ++ i) {
+
+            cursor_area = calc_current_area(
+                area,
+                (struct Area) { text->cursor_col * 8, text->cursor_row * 16, 1, 16, 0, 0 }
+            );
+
+            // 如果光标完全不可见，调整 offset，使得光标恰好在显示区域的最右下侧。
+            if (cursor_area.height <= 0 || cursor_area.width <= 0 || cursor_area.x < 0 || cursor_area.y < 0) {
+                DEBUG("[GUI TextEdit] offset adjust for curser. because: cursor_area(width, height) = (%d,%d)\n", 
+                cursor_area.width, cursor_area.height);
+                edit->area.offset_x = max(0, text->cursor_col * 8 - area.width + 8);
+                edit->area.offset_y = max(0, text->cursor_row * 16 - area.height + 16);
+                area = calc_current_area(parent_area, edit->area);
+                DEBUG("[GUI TextEdit] area change. (%d %d %d %d)\n", area.x, area.y, area.width, area.height);
+            } else {
+                break;
+            }
+        }
+
+        drawrect(
+            AREA_ARGS(cursor_area), 
+            RGB(0x0, 0x0, 0x0)
+        );
+       
+        if(edit->point2_col != -1)
+        {
+            if(edit->point1_row == edit->point2_row){
+                struct Area cursor_area_line;
+                //for (int i = 0; i < 10; ++ i) {
+                int wid = (edit->point2_col-edit->point1_col + 1)*8;
+                int len = strlen(edit->text->data[edit->point1_row]);
+                if(edit->point1_col >= len){
+                    edit->point1_col = len - 1 ;
+                }
+                int res_len = 8*(len - edit->point1_col);
+                if(wid > res_len){
+                    wid = res_len;
+                }
+                if (!wid){
+                    wid = 8;
+                }
+                DEBUG2("DRAWING: row:%d len:%d col:%d \n", edit->point1_row, strlen(edit->text->data[edit->point1_row]), edit->point1_col );
+                cursor_area_line = calc_current_area(
+                    area,
+                    (struct Area) { edit->point1_col * 8, edit->point1_row * 16, wid, 16, 0, 0 }
+                );
+                //}
+                drawrect(
+                    AREA_ARGS(cursor_area_line), 
+                    RGB(0xa0, 0xa0, 0xa0)
+                );
+            }else{
+                struct Area cursor_area_top;
+                int len = strlen(edit->text->data[edit->point1_row]);
+                if(edit->point1_col >= len){
+                    edit->point1_col = len - 1 ;
+                }
+                int wid = 8*(len - edit->point1_col);
+                //DEBUG2("DRAWING: row:%d len:%d col:%d \n", edit->point1_row, strlen(edit->text->data[edit->point1_row]), edit->point1_col );
+                cursor_area_top = calc_current_area(
+                    area,
+                    (struct Area) { edit->point1_col* 8, edit->point1_row * 16, wid, 16, 0, 0 }
+                );
+                drawrect(
+                    AREA_ARGS(cursor_area_top), 
+                    RGB(0xa0, 0xa0, 0xa0)
+                );
+                len = strlen(edit->text->data[edit->point2_row]);
+                if(edit->point2_col >= len){
+                    edit->point2_col = len - 1 ;
+                }
+                struct Area cursor_area_bottom;
+                cursor_area_bottom = calc_current_area(
+                    area,
+                    (struct Area) { 0, edit->point2_row * 16, (1 + edit->point2_col)*8, 16, 0, 0 }
+                );
+
+                drawrect(
+                    AREA_ARGS(cursor_area_bottom), 
+                    RGB(0xa0, 0xa0, 0xa0)
+                );
+                for(int i = edit->point1_row + 1; i < edit->point2_row; i++){
+                    struct Area cursor_area_mid;
+                    cursor_area_mid = calc_current_area(
+                        area,
+                        (struct Area) { 0, i * 16, 8 * strlen(edit->text->data[i]), 16, 0, 0 }
+                    );
+                    drawrect(
+                        AREA_ARGS(cursor_area_mid), 
+                        RGB(0xa0, 0xa0, 0xa0)
+                    );
+                }
+            }
+        }
+    
+    }
+
+    for (int r = 0; r < text->maxrow; ++ r) {
+        int len = strlen(text->data[r]);
+        for (int col = 0; col < len; ++ col) {
+            // 枚举所有的字符
+            unsigned char c = text->data[r][col];
+
+            int is_han = (c >= 160 && col + 1 < len && (unsigned char) text->data[r][col+1] >= 160);
+            int width = is_han? 16 : 8;
+
+            struct Area c_area = calc_current_area(area, (struct Area) { col * 8, r * 16, width, 16, 0, 0 });
+
+            // 只有在能够完整绘制的时候才进行绘制
+            if (c_area.x >= 0 && c_area.y >= 0 && c_area.width == width && c_area.height == 16) 
+            {
+                if (is_han) {
+                    drawgbk(AREA_ARGS(c_area), get_gbk_point_by_c1_c2(c, (unsigned char) text->data[r][col + 1]));
+                } else {
+                    drawarea(
+                        AREA_ARGS(c_area), 
+                        get_text_area(c));
+                }
+            }
+
+            if (is_han) ++ col;
+        }
+    }
+
     return 0;
 }
+
+
+int draw_pinyinInput(struct PinyinInput * pinyin, struct Area area) {
+    area = calc_current_area(area, pinyin->area);
+    draw_pinyinEdit(pinyin->edit, area);
+    return 0;
+}
+
 
 int handle_keyboard_pinyinInput(struct PinyinInput * pinyin, int c) {
     struct textframe * text = pinyin->edit->text;
@@ -1417,7 +1567,7 @@ int make_SearchFrame(struct SearchFrame** psearch, struct FileSwitchBar* parent)
     make_LineEdit(&search->edit, search, "SearchFrame");
     
     search->parent = parent;
-    search->area = (struct Area) {500, 250, 100, 18, 0, 0 };;
+    search->area = (struct Area) {500, 0, 200, 18, 0, 0 };;
 
     *psearch = search;
 
