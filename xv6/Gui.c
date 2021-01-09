@@ -1271,7 +1271,6 @@ int Button_exec_tool(struct Button * button) {
         int s = mkdir(fullpath);
         DEBUGDF("mkdir: %d\n", s);
         FileListBuffer_update_FileList(toolbar->parent->fileList);
-        free(fullpath);
     }else if(!strcmp(tool_name, "save")){
         DEBUGDF("\\\\\\ clicked save botton ------\n");
         if(strcmp(button->parent_type, "ToolBar")){
@@ -1435,10 +1434,19 @@ int handle_keyboard_SearchFrame(struct SearchFrame* search, int c){
         // int Search(Textframe * edit, char * str);
         if(search->parent->current && search->edit->text){
             // not found
-            //if(Search(search->parent->current->edit, search->edit->text)){
-                
-            //    DEBUG2(" not found\n");
-            //}
+            //if(Search(search->parent->current->edit, search->edit->text) >= 0){
+                struct TextEdit* edit = search->parent->current->edit;
+                //edit->text->cursor_col = 4;
+                //edit->text->cursor_row = 0;
+                edit->point2_col = edit->text->cursor_col - 1;
+                edit->point2_row = edit->text->cursor_row;
+                edit->point1_col = edit->text->cursor_col - strlen(search->edit->text->data[0]);
+                edit->point1_row = edit->text->cursor_row;
+                // DEBUG2("there %d %d %d %d\n",edit->point2_col, edit->point2_row,
+                // edit->point1_col,edit->point1_row);
+                cursor_focus = edit;
+            //  DEBUG2(" not found\n");
+            //}else
             LineEdit_set_str(search->parent->parent->statusBar->edit->text, "No results.");
         }
         DEBUG2("searching\n");
