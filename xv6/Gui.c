@@ -579,7 +579,8 @@ int make_FileListBuffer(struct FileListBuffer ** pbuffer, struct BufferManager *
 
 int draw_FileListBuffer(struct FileListBuffer * buffer, struct Area area) {
     area = calc_current_area(area, buffer->area);
-
+    drawrect(100, 20, 2, 680, RGB(0, 0, 0));
+    drawrect(0, 20, 800, 2, RGB(0, 0, 0));
     for (int i = 0; i < buffer->n_files; ++ i) {
         draw_FileNameControl(buffer->files[i], area);
     }
@@ -1068,7 +1069,7 @@ int free_Button(struct Button ** button){
 int make_FileSwitchBar(struct FileSwitchBar **pfileSwitch, struct BufferManager * parent) {
     struct FileSwitchBar * fileSwitch = malloc(sizeof(struct FileSwitchBar));
     
-    fileSwitch->area = (struct Area) { 115, 30, 700, 700, 0, 0 };
+    fileSwitch->area = (struct Area) { 115, 23, 700, 700, 0, 0 };
 
     memset(fileSwitch->buttons, 0, sizeof(fileSwitch->buttons));
     memset(fileSwitch->files, 0, sizeof(fileSwitch->files));
