@@ -79,7 +79,7 @@ int draw_TextEdit(struct TextEdit *edit, struct Area parent_area) {
 
     struct Area area = calc_current_area(parent_area, edit->area);
 
-    DEBUGDF("[GUI TextEdit] draw text edit, %d %d %d %d (offset x y) = (%d %d)\n", area.x, area.y, area.width, area.height, area.offset_x, area.offset_y);
+    // DEBUGDF("[GUI TextEdit] draw text edit, %d %d %d %d (offset x y) = (%d %d)\n", area.x, area.y, area.width, area.height, area.offset_x, area.offset_y);
 
     // 绘制背景
     drawrect(AREA_ARGS(area), 131071);
@@ -739,17 +739,31 @@ int rename_FileNameControl(struct FileNameControl * control){
     int fileflag = File_isDir(control->oldName);
     if(strcmp(control->edit->text->data[0], control->oldName)){
         if(!fileflag){
+            if (chdir(control->parent->path) == 0){
+                DEBUGDF("chdir to path: %s\n", control->parent->path);
+            }
             if(link(control->oldName, control->edit->text->data[0]) < 0){
                 DEBUGDF("link failed\n");
             }
             if(unlink(control->oldName) < 0){
                 DEBUGDF("unlink failed\n");
             }
+            for (int i = 0; i < control->parent->parent->fileSwitch->n_files; i++){
+                if (strcmp(control->parent->parent->fileSwitch->buttons[i]->edit->text->data[0], control->oldName) == 0){
+                    DEBUGDF("path1: %s,path2: %s\n", control->parent->path, control->parent->parent->fileSwitch->files[i]->filepathname);
+                    LineEdit_set_str(control->parent->parent->fileSwitch->buttons[i]->edit->text, control->edit->text->data[0]);
+                    strcpy(control->parent->parent->fileSwitch->files[i]->filepathname, control->edit->text->data[0]);
+                }
+            }
+            if (chdir("/") == 0){
+                DEBUGDF("chdir to Root.\n");
+            }
         }
         else {
-            // 
+            // 文件夹重命名 
             return 0;
         }
+        DEBUGDF("path: %s\n", control->parent->path);
         FileListBuffer_update_FileList(control->parent);
         DEBUGDF("old: %s,new: %s\n", control->oldName, control->edit->text->data[0]);
     }else{
