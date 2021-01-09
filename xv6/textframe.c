@@ -93,6 +93,41 @@ int File_isDir(char *filename)
     }
 }
 
+// 针对中文，专门用于处理 r 和 c 的值
+// pos = 0 表示定位到汉字的左边那个字符，pos = 1 则是定位到右边。
+// dir = -1 或 1， 表示想左和向右的倾向。
+void textframe_adjust_r_c(struct textframe * text, int * r, int *c, int pos, int dir) {
+    if (*r >= text->maxrow) *r = text->maxrow - 1;
+    if (*r < 0)             *r = text->maxrow + 1;
+    if (0 <= *r && *r < text->maxrow) {
+        int len = strlen(text->data[*r]);
+        if (*c > len) *c = len;
+        if (*c < 0)   *c = 0;
+
+        if (0 <= *c && *c < len) {
+            char * curline = text->data[*r];
+            unsigned char ch = curline[*c];
+            // 出现了汉字字节。
+            if (ch >= 160) {
+                int i;
+                for (i = *c; i >= 0; --i) {
+                    ch = curline[i];
+                    if (ch < 160) break;
+                }
+                // 该汉字字节一直往前，一共有多少个汉字字节（包括当前）
+                int count = *c - i;
+                // 根据此，微调 c
+                if (pos == 0 && count % 2 == 0) {
+                    *c += dir;
+                }
+                if (pos == 1 && count % 2 == 1) {
+                    *c += dir;
+                }
+            }
+        }
+    }
+}
+
 int textframe_read(struct textframe *text, char *filename)
 {
     //打开文件
@@ -694,12 +729,19 @@ void putc_to_str(struct textframe *text, int ch)
 
 void backspace_to_str(struct textframe *text)
 {
+    textframe_adjust_r_c(text, & text->cursor_row, & text->cursor_col, 0, 1);
     char **s = &(text->data[text->cursor_row]);
     int p = text->cursor_col;
     int len = strlen(*s);
     int i;
-    for (i = p; i < len; ++i)
-        (*s)[i] = (*s)[i + 1];
+
+    int is_han = (p >= 0 && p < len && (unsigned char) (*s)[p] >= 160);
+
+    do {
+        for (i = p; i < len; ++i)
+            (*s)[i] = (*s)[i + 1];
+        // 如果是汉字，则删两个字符
+    } while (is_han --);
 }
 
 void move_to_next_char(struct textframe *text)
@@ -712,6 +754,7 @@ void move_to_next_char(struct textframe *text)
         ++text->cursor_row;
         text->cursor_col = 0;
     }
+    textframe_adjust_r_c(text, & text->cursor_row, & text->cursor_col, 0, 1);
 }
 
 void move_to_previous_char(struct textframe *text)
@@ -723,40 +766,29 @@ void move_to_previous_char(struct textframe *text)
         --text->cursor_row;
         text->cursor_col = strlen(text->data[text->cursor_row]);
     }
+    textframe_adjust_r_c(text, & text->cursor_row, & text->cursor_col, 0, -1);
 }
 
 void move_to_next_line(struct textframe *text)
 {
     if (text->cursor_row + 1 < text->maxrow)
-    {
         ++text->cursor_row;
-    }
-
-    int len = strlen(text->data[text->cursor_row]);
-    if (text->cursor_col > len)
-    {
-        text->cursor_col = len;
-    }
+    textframe_adjust_r_c(text, & text->cursor_row, & text->cursor_col, 0, 1);
 }
 
 void move_to_last_line(struct textframe *text)
 {
     if (text->cursor_row > 0)
-    {
         --text->cursor_row;
-    }
-
-    int len = strlen(text->data[text->cursor_row]);
-    if (text->cursor_col > len)
-    {
-        text->cursor_col = len;
-    }
+    textframe_adjust_r_c(text, & text->cursor_row, & text->cursor_col, 0, 1);
 }
 
 void new_line_to_editor(struct textframe *text)
 {
     int len = text->maxrow;
     char **new_data;
+
+    textframe_adjust_r_c(text, & text->cursor_row, & text->cursor_col, 0, 1);
 
     if (len + 1 >= text->maxrow_capacity)
     {
@@ -799,6 +831,8 @@ void move_to_pos(struct textframe *text, int r, int c)
         c = strlen(text->data[r]);
     text->cursor_row = r;
     text->cursor_col = c;
+
+    textframe_adjust_r_c(text, & text->cursor_row, & text->cursor_col, 0, 1);
 }
 
 void move_to_end(struct textframe *text)
@@ -822,6 +856,7 @@ void LineEdit_set_str(struct textframe *text, char *str)
     text->data[0] = malloc(strlen(str) + 1);
     strcpy(text->data[0], str);
     text->maxrow_capacity = text->maxrow = 1;
+    text->cursor_col = text->cursor_row = 0;
 }
 
 void clear_cur_line(struct textframe *text) {

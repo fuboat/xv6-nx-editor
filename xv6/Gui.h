@@ -145,7 +145,6 @@ struct StatusBar
 };
 
 
-
 int make_TextEdit(struct TextEdit **, void * parent, char * parent_type);
 int draw_TextEdit(struct TextEdit*, struct Area area);
 int handle_mouse_TextEdit(struct TextEdit*, int x, int y,  int mouse_opt);
