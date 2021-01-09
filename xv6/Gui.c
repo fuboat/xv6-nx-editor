@@ -302,7 +302,7 @@ int handle_keyboard_TextEdit(struct TextEdit *edit, int c) {
 
     case LEFT_ARROW: case BACKSPACE:{
         if(edit->point2_col == -1){
-            move_to_previous_char(text);
+            if (c == LEFT_ARROW) move_to_previous_char(text);
         }
         if (c == BACKSPACE) {
             if(edit->point2_col == -1) {
