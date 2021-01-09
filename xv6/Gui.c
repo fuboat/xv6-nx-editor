@@ -317,9 +317,9 @@ int handle_keyboard_TextEdit(struct TextEdit *edit, int c) {
                                               edit->point2_row, edit->point2_col);
                 LineEdit_set_str(edit->text, "");
                 edit->text = text;
+                move_to_pos(text, edit->point1_row, edit->point1_col);
             }
         }
-        move_to_pos(text, edit->point1_row, edit->point1_col);
         edit->point2_col = -1;
         edit->point2_row = -1;
         break;
@@ -579,7 +579,8 @@ int make_FileListBuffer(struct FileListBuffer ** pbuffer, struct BufferManager *
 
 int draw_FileListBuffer(struct FileListBuffer * buffer, struct Area area) {
     area = calc_current_area(area, buffer->area);
-
+    drawrect(100, 20, 2, 680, RGB(0, 0, 0));
+    drawrect(0, 20, 800, 2, RGB(0, 0, 0));
     for (int i = 0; i < buffer->n_files; ++ i) {
         draw_FileNameControl(buffer->files[i], area);
     }
@@ -744,8 +745,10 @@ int rename_FileNameControl(struct FileNameControl * control){
     int fileflag = File_isDir(control->oldName);
     if(strcmp(control->edit->text->data[0], control->oldName)){
         if(!fileflag){
-            if (chdir(control->parent->path) == 0){
-                DEBUGDF("chdir to path: %s\n", control->parent->path);
+            if (strlen(control->parent->path) > 0){
+                if (chdir(control->parent->path) == 0){
+                    DEBUGDF("chdir to path: %s\n", control->parent->path);
+                }
             }
             if(link(control->oldName, control->edit->text->data[0]) < 0){
                 DEBUGDF("link failed\n");
@@ -753,11 +756,24 @@ int rename_FileNameControl(struct FileNameControl * control){
             if(unlink(control->oldName) < 0){
                 DEBUGDF("unlink failed\n");
             }
+            char filepath[512] = {0};
+            strcpy(filepath, control->parent->path);
+            strcpy(filepath + strlen(filepath), control->oldName);
+            DEBUGDF("filepath: %s\n", filepath);
             for (int i = 0; i < control->parent->parent->fileSwitch->n_files; i++){
-                if (strcmp(control->parent->parent->fileSwitch->buttons[i]->edit->text->data[0], control->oldName) == 0){
+                DEBUGDF("filepathname: %s\n", control->parent->parent->fileSwitch->files[i]->filepathname);
+                if (strcmp(control->parent->parent->fileSwitch->buttons[i]->edit->text->data[0], control->oldName) == 0
+                && strcmp(filepath, control->parent->parent->fileSwitch->files[i]->filepathname) == 0){
                     DEBUGDF("path1: %s,path2: %s\n", control->parent->path, control->parent->parent->fileSwitch->files[i]->filepathname);
                     LineEdit_set_str(control->parent->parent->fileSwitch->buttons[i]->edit->text, control->edit->text->data[0]);
-                    strcpy(control->parent->parent->fileSwitch->files[i]->filepathname, control->edit->text->data[0]);
+                    int pos= 0;
+                    for(int j = 0; j < strlen(control->parent->parent->fileSwitch->files[i]->filepathname); j++){
+                        if (control->parent->parent->fileSwitch->files[i]->filepathname[j] == '/'){
+                            pos = j;
+                        }
+                    }
+                    strcpy(control->parent->parent->fileSwitch->files[i]->filepathname + pos, control->edit->text->data[0]);
+                    DEBUGDF("newfilepathname: %s\n", control->parent->parent->fileSwitch->files[i]->filepathname);
                 }
             }
             if (chdir("/") == 0){
@@ -1055,7 +1071,7 @@ int free_Button(struct Button ** button){
 int make_FileSwitchBar(struct FileSwitchBar **pfileSwitch, struct BufferManager * parent) {
     struct FileSwitchBar * fileSwitch = malloc(sizeof(struct FileSwitchBar));
     
-    fileSwitch->area = (struct Area) { 115, 30, 700, 700, 0, 0 };
+    fileSwitch->area = (struct Area) { 115, 23, 700, 700, 0, 0 };
 
     memset(fileSwitch->buttons, 0, sizeof(fileSwitch->buttons));
     memset(fileSwitch->files, 0, sizeof(fileSwitch->files));
@@ -1164,7 +1180,10 @@ int FileSwitchBar_open_file(struct FileSwitchBar * fileSwitch, char * filename) 
         fileSwitch->buttons[fileSwitch->n_files]->exec = Button_exec_switch_to_file;
         make_FileBuffer(fileSwitch->files + fileSwitch->n_files, fileSwitch);
         LineEdit_set_str(fileSwitch->buttons[fileSwitch->n_files]->edit->text, filename);
-        FileBuffer_open_file(fileSwitch->files[fileSwitch->n_files], filename);
+        char filepath[512] = {};
+        strcpy(filepath, fileSwitch->parent->fileList->path);
+        strcpy(filepath + strlen(filepath), filename);
+        FileBuffer_open_file(fileSwitch->files[fileSwitch->n_files], filepath);
         fileSwitch->current = fileSwitch->files[fileSwitch->n_files];
         fileSwitch->n_files ++;
         return 0;
@@ -1184,9 +1203,6 @@ int FileSwitchBar_open_file(struct FileSwitchBar * fileSwitch, char * filename) 
             char * filepath = strcat(filename, "/", strlen(filename), 1);
             strcpy(fileSwitch->parent->fileList->path + strlen(fileSwitch->parent->fileList->path), filepath);
             free(filepath);
-            // 切换工作目录
-            // int a = chdir(fileSwitch->parent->fileList->path);
-            // DEBUGDF("chdir: %d\n", a);
         }
         free(lastpath);
         FileListBuffer_update_FileList(fileSwitch->parent->fileList);
@@ -1341,7 +1357,7 @@ int draw_pinyinEdit(struct TextEdit *edit, struct Area parent_area) {
 
     struct Area area = calc_current_area(parent_area, edit->area);
 
-    DEBUGDF("[GUI TextEdit] draw text edit, %d %d %d %d (offset x y) = (%d %d)\n", area.x, area.y, area.width, area.height, area.offset_x, area.offset_y);
+    DEBUG("[GUI TextEdit] draw text edit, %d %d %d %d (offset x y) = (%d %d)\n", area.x, area.y, area.width, area.height, area.offset_x, area.offset_y);
 
     // 绘制背景
     drawrect(AREA_ARGS(area), 59196);
