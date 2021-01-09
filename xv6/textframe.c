@@ -82,6 +82,7 @@ int File_isDir(char *filename)
     int fd = open(filename, 0);
     struct stat st;
     fstat(fd, &st);
+    close(fd);
     if (st.type == T_DIR)
     {
         return 1;

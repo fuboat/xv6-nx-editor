@@ -661,7 +661,7 @@ int FileListBuffer_update_FileList(struct FileListBuffer * buffer) {
     buffer->n_files = n_files;
     buffer->files = malloc(sizeof(struct FileNameControl *) * n_files);
 
-    DEBUG("----- [GUI FileListBuffer] nfiles = %d -----\n", n_files);
+    DEBUGDF("----- fd = %d [GUI FileListBuffer] nfiles = %d -----\n", fd, n_files);
 
     close(fd); 
     fd = open(path, 0); 
@@ -1153,39 +1153,22 @@ int FileSwitchBar_open_file(struct FileSwitchBar * fileSwitch, char * filename) 
         //To do 释放之前的变量
         char * filepath = fileSwitch->parent->fileList->path;
         char * lastpath = (char *)malloc(strlen(filepath) + 2);
-        memset(lastpath, 0, sizeof(char *) * (strlen(filepath) + 2));
+        memset(lastpath, 0, strlen(filepath) + 2);
         int pos = -1;
-        if (strcmp(filename, "..") == 0){
-            if (strcmp(fileSwitch->parent->fileList->path, "") == 0){
-                return 0;
-            }
-            for (int i = 0; i < strlen(filepath)-1; i++){
-                if(filepath[i] == '/'){
-                    pos = i;
-                }
-            }
-            for (int i = 0; i <= pos; i++) {
-                lastpath[i] = filepath[i];
-            }
-            if (pos == -1) {
-                strcpy(lastpath, "");
-            }
-            DEBUGDF("lastpath: %s\n", lastpath);
-            strcpy(fileSwitch->parent->fileList->path, lastpath);
-            free(filepath);
-            free(lastpath);
-            // int a = chdir(fileSwitch->parent->fileList->path);
-            // DEBUGDF("..chdir: %d\n", a);
-        }
-        else{
+        DEBUGDF("filename = %s\n", filename);
+        if (strcmp(filename, ".") == 0) {
+            ;
+        } else if (strcmp(filename, "..") == 0){
+            filepath[0] = '\0';
+        } else {
             char * filepath = strcat(filename, "/", strlen(filename), 1);
             strcpy(fileSwitch->parent->fileList->path + strlen(fileSwitch->parent->fileList->path), filepath);
             free(filepath);
-            FileListBuffer_update_FileList(fileSwitch->parent->fileList);
             // 切换工作目录
             // int a = chdir(fileSwitch->parent->fileList->path);
             // DEBUGDF("chdir: %d\n", a);
         }
+        free(lastpath);
         FileListBuffer_update_FileList(fileSwitch->parent->fileList);
         return 0;
     } 
@@ -1272,9 +1255,11 @@ int Button_exec_tool(struct Button * button) {
         // 新文件填入filelist 放在fileswitchbar末尾 显示untitled并调用重命名
         char * pathname = toolbar->parent->fileList->path;
         char * fullfilename = strcat(pathname, "New File", strlen(pathname), strlen("New File"));
-        if (open(fullfilename, O_CREATE) < 0){
+        int fd;
+        if ((fd = open(fullfilename, O_CREATE)) < 0){
             DEBUGDF("createFile Fail!\n");
         }
+        close(fd);
         free(fullfilename);
         FileListBuffer_update_FileList(toolbar->parent->fileList);
     }else if(!strcmp(tool_name, "New Folder")){
@@ -1285,7 +1270,6 @@ int Button_exec_tool(struct Button * button) {
         char * fullpath = strcat(pathname, "NewFolder", strlen(pathname), strlen("NewFolder"));
         int s = mkdir(fullpath);
         DEBUGDF("mkdir: %d\n", s);
-        free(fullpath);
         FileListBuffer_update_FileList(toolbar->parent->fileList);
         free(fullpath);
     }else if(!strcmp(tool_name, "save")){
