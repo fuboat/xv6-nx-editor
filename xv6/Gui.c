@@ -272,6 +272,7 @@ int handle_mouse_TextEdit(struct TextEdit *edit, int x, int y, int mouse_opt) {
 #define TAB 9
 #define CTRL_C 3
 #define CTRL_V 22
+#define CTRL_F 6
 
 int handle_keyboard_TextEdit(struct TextEdit *edit, int c) {
     struct textframe *text = edit->text;
@@ -485,7 +486,7 @@ int handle_mouse_LineEdit(struct LineEdit *edit, int x, int y, int mouse_opt) {
     mouse_pos_transform(edit->area, &x, &y);
 
     cursor_focus = edit;
-    cursor_focus = 0;
+    //cursor_focus = 0;
     move_to_pos(edit->text, y/16, x/8);
     DEBUG("[GUI: LineEdit] mouse in LineEdit, pos = (%d, %d), type = %d\n", x, y, mouse_opt);
 
@@ -817,6 +818,7 @@ int make_BufferManager(struct BufferManager ** pmanager) {
     make_FileSwitchBar(& manager->fileSwitch, manager);
     make_ToolBar(& manager->toolBar, manager);
     make_pinyinInput(& manager->pinyin, manager);
+    make_StatusBar(& manager->statusBar, manager);
     manager->focus = 0;
     *pmanager = manager;
     return 0;
@@ -832,6 +834,7 @@ int draw_BufferManager(struct BufferManager * manager, struct Area area) {
     DEBUG("----- draw toolbar -----\n");
     draw_ToolBar(manager->toolBar, area);
     draw_pinyinInput(manager->pinyin, area);
+    draw_StatusBar(manager->statusBar, area);
     return 0;
 }
 
@@ -840,7 +843,7 @@ int handle_mouse_BufferManager(struct BufferManager* manager, int x, int y, int 
     mouse_pos_transform(manager->area, &x, &y);
 
     // DEBUG2("[GUI: BufferManager] mouse in BufferManager, pos = (%d, %d), type = %d\n", x, y, mouse_opt);
-    
+    manager->fileSwitch->searchInput = 0;
     if(isRename && manager->fileList->file_selected){
         int x1 = x, y1 = y;
         mouse_pos_transform(manager->fileList->area, &x1, &y1);
@@ -873,20 +876,26 @@ int handle_mouse_BufferManager(struct BufferManager* manager, int x, int y, int 
 int handle_keyboard_BufferManager(struct BufferManager * manager, int c) {
     // 根据焦点判断由哪一部件接收键盘输入
     // 当输入法启用且输入的内容为 a-z 的字母时，或数字时，控制权移交到输入法
-    DEBUG2("key bord: %d\n", c);
+    LineEdit_set_str(manager->statusBar->edit->text, "");
     if(c == CTRL_P) {
         manager->pinyin->on ^= 1;
         printf(0, "is pinyin on: %d\n", manager->pinyin->on);
+        if(manager->pinyin->on){
+            LineEdit_set_str(manager->statusBar->edit->text, "Chinese"); 
+        }else{
+            LineEdit_set_str(manager->statusBar->edit->text, "English"); 
+        }
         return 0;
-    } else if(manager->pinyin->on && (('a' <= c && c <= 'z') || ('0' <= c && c <= '9') || c == ENTER || c == BACKSPACE || c == ',' || c == '.') && 
-              handle_keyboard_pinyinInput(manager->pinyin, c) >= 0) {
+    } else if(manager->pinyin->on && (('a' <= c && c <= 'z') || ('0' <= c && c <= '9') || c == ENTER || c == BACKSPACE || c == ',' || c == '.') &&   
+        handle_keyboard_pinyinInput(manager->pinyin, c) >= 0) {
         return 0;
     }
     else if (isRename && manager->focus == manager->fileList)
         return handle_keyboard_FileListBuffer(manager->fileList, c);
     else if (manager->focus == manager->fileSwitch) {
+        DEBUG2("key bord: %d\n", c);
         return handle_keyboard_FileSwitchBar(manager->fileSwitch, c);
-    }  else {
+    }else {
         return 0;
     }
 }
@@ -993,11 +1002,12 @@ int make_FileSwitchBar(struct FileSwitchBar **pfileSwitch, struct BufferManager 
 
     memset(fileSwitch->buttons, 0, sizeof(fileSwitch->buttons));
     memset(fileSwitch->files, 0, sizeof(fileSwitch->files));
-
     fileSwitch->n_files = 0;
     fileSwitch->current = 0;
     fileSwitch->parent = parent;
-
+    fileSwitch->ifSearch = 0;
+    fileSwitch->searchInput = 0;
+    make_SearchFrame(& fileSwitch->search, fileSwitch);
     *pfileSwitch = fileSwitch;
 
     return 0;
@@ -1016,8 +1026,12 @@ int draw_FileSwitchBar(struct FileSwitchBar * fileSwitch, struct Area area) {
 
     if (fileSwitch->current) {
         draw_FileBuffer(fileSwitch->current, area);
+        if(fileSwitch->ifSearch){
+            draw_SearchFrame(fileSwitch->search, area);
+        }
     }
 
+    
     return 0;
 }
 
@@ -1039,9 +1053,13 @@ int handle_mouse_FileSwitchBar(struct FileSwitchBar * fileSwitch, int x, int y, 
             }
         }
     }
-
-    if (fileSwitch->current && 
-    is_pos_in_area(fileSwitch->current->area, x, y)) {
+    
+    if (fileSwitch->current && fileSwitch->ifSearch && is_pos_in_area(fileSwitch->search->area, x, y)){
+        fileSwitch->searchInput = 1;
+        DEBUG2("in searchmode\n");
+        return handle_mouse_SearchFrame(fileSwitch->search, x, y, mouse_opt);
+    }else if (fileSwitch->current && 
+        is_pos_in_area(fileSwitch->current->area, x, y)) {
         return handle_mouse_FileBuffer(fileSwitch->current, x, y, mouse_opt);
     }
 
@@ -1049,17 +1067,30 @@ int handle_mouse_FileSwitchBar(struct FileSwitchBar * fileSwitch, int x, int y, 
 }
 
 int handle_keyboard_FileSwitchBar(struct FileSwitchBar * fileSwitch, int c) {
+    DEBUG2("key bord in File Switch: %d\n", c);
     switch (c)
     {
         case TAB:
             FileSwitchBar_handle_tab(fileSwitch);
             break;
-        case CTRL_C:case CTRL_S:case CTRL_V:
-            return handle_keyboard_FileBuffer(fileSwitch->current, c);
+        case CTRL_F:
+            DEBUG2("inbore\n");
+            fileSwitch->ifSearch = !(fileSwitch->ifSearch);
+            if(fileSwitch->search->edit){
+                move_to_end(fileSwitch->search->edit->text);
+                // something wrong
+                //move_to_pos(fileSwitch->search->edit->text,0,0);
+            }
+            cursor_focus = fileSwitch->search->edit;
+            fileSwitch->searchInput  = 1;
             break;
         default:
-            if (fileSwitch->current)
+            if (fileSwitch->current){
+                if(fileSwitch->searchInput){
+                    return handle_keyboard_SearchFrame(fileSwitch->search, c);
+                }
                 return handle_keyboard_FileBuffer(fileSwitch->current, c);
+            }
             break;
     }
 
@@ -1344,6 +1375,87 @@ int handle_keyboard_pinyinInput(struct PinyinInput * pinyin, int c) {
     } else {
         return -1;
     }
+}
+
+/*********************
+ * 
+ * SearchFrame.
+ * 
+ *********************/
+int make_SearchFrame(struct SearchFrame** psearch, struct FileSwitchBar* parent){
+    struct SearchFrame * search = malloc(sizeof (struct SearchFrame));
+    memset(search, 0, sizeof(struct SearchFrame));
+    search->edit = 0;
+    make_LineEdit(&search->edit, search, "SearchFrame");
+    
+    search->parent = parent;
+    search->area = (struct Area) {500, 250, 100, 18, 0, 0 };;
+
+    *psearch = search;
+
+    return 0;
+}
+
+int draw_SearchFrame(struct SearchFrame* search, struct Area area){
+    area = calc_current_area(area, search->area);
+    DEBUG2("[GUI SearchFrame] drawing. area (x, y, width, height) = (%d %d %d %d)\n",
+    area.x,
+    area.y,
+    area.width,
+    area.height);
+    drawrect(AREA_ARGS(area), 59196);
+    return draw_LineEdit(search->edit, area);
+}
+
+int handle_keyboard_SearchFrame(struct SearchFrame* search, int c){
+    if(c == ENTER){
+        // int Search(Textframe * edit, char * str);
+        if(search->parent->current && search->edit->text){
+            // not found
+            //if(Search(search->parent->current->edit, search->edit->text)){
+                
+            //    DEBUG2(" not found\n");
+            //}
+            LineEdit_set_str(search->parent->parent->statusBar->edit->text, "No results.");
+        }
+        DEBUG2("searching\n");
+    }else{
+        return handle_keyboard_LineEdit(search->edit, c);
+    }
+}
+
+int handle_mouse_SearchFrame(struct SearchFrame* search, int x, int y, int mouse_opt){
+    return handle_mouse_LineEdit(search->edit, x, y, mouse_opt);
+}
+
+/*********************
+ * 
+ * StatusBar
+ * 
+ *********************/
+int make_StatusBar(struct StatusBar** pstatusBar, struct BufferManager* parent){
+    struct StatusBar * statusBar = malloc(sizeof (struct StatusBar));
+    memset(statusBar, 0, sizeof(struct StatusBar));
+    statusBar->edit = 0;
+    make_LineEdit(&statusBar->edit, statusBar, "StatusBar");
+    
+    statusBar->parent = parent;
+    statusBar->area = (struct Area) {0, 580, 800, 20, 0, 0 };;
+
+    *pstatusBar = statusBar;
+
+    return 0;
+}
+
+int draw_StatusBar(struct StatusBar* statusBar, struct Area area){
+    area = calc_current_area(area, statusBar->area);
+    DEBUG2("[GUI SatusBar] drawing. area (x, y, width, height) = (%d %d %d %d)\n",
+    area.x,
+    area.y,
+    area.width,
+    area.height);
+    drawrect(AREA_ARGS(area), 59196);
+    return draw_LineEdit(statusBar->edit, area);
 }
 
 /*

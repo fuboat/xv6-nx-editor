@@ -54,6 +54,7 @@ struct BufferManager {
     struct FileListBuffer * fileList;
     struct FileSwitchBar * fileSwitch;
     struct ToolBar * toolBar;
+    struct StatusBar * statusBar;
     struct PinyinInput * pinyin;
     void * focus;
     struct textframe* clipBoard;
@@ -91,6 +92,10 @@ struct FileSwitchBar {
     struct FileBuffer * current;
     
     struct BufferManager * parent;
+    // 搜索框
+    int ifSearch;
+    struct SearchFrame* search;
+    int searchInput;
 };
 
 #define TOOL_NUM 3
@@ -114,6 +119,31 @@ struct PinyinInput
     struct TextEdit * edit;
     struct BufferManager * parent;
 };
+
+/*
+*
+* 搜索框 CTRL+F启动 回车开始检索
+*
+*/
+struct SearchFrame
+{
+    struct Area area;
+    struct LineEdit *edit;
+    struct FileSwitchBar * parent;
+};
+
+/*
+*
+* StatusBar
+*
+*/
+struct StatusBar
+{
+    struct Area area;
+    struct LineEdit *edit;
+    struct BufferManager * parent;
+};
+
 
 
 int make_TextEdit(struct TextEdit **, void * parent, char * parent_type);
@@ -174,3 +204,12 @@ int make_pinyinInput(struct PinyinInput **, struct BufferManager * parent);
 int draw_pinyinInput(struct PinyinInput *, struct Area area);
 int handle_keyboard_pinyinInput(struct PinyinInput *, int c);
 int get_pinyinInput_status(struct PinyinInput *);
+
+int make_SearchFrame(struct SearchFrame**, struct FileSwitchBar* parent);
+int draw_SearchFrame(struct SearchFrame*, struct Area area);
+int handle_keyboard_SearchFrame(struct SearchFrame*, int c);
+int handle_mouse_SearchFrame(struct SearchFrame*, int x, int y, int mouse_opt);
+
+
+int make_StatusBar(struct StatusBar**, struct BufferManager* parent);
+int draw_StatusBar(struct StatusBar*, struct Area area);
