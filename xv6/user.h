@@ -25,6 +25,8 @@ int uptime(void);
 int drawrect(int xl, int yl, int width, int height, int color);
 int drawarea(int xl, int yl, int width, int height, int *colors);
 int drawarea_short(int xl, int yl, int width, int height, unsigned short *colors);
+int drawgbk_color(int xl, int yl, int width, int height, int color, char * gbk);
+int drawarea_color(int xl, int yl, int width, int height, int color, int *colors);
 int drawgbk(int xl, int yl, int width, int height, char * gbk);
 int update();
 int get_msg(void);
@@ -49,7 +51,8 @@ enum MSG_TYPE {
     MOUSE_LEFT_PRESS,
     MOUSE_LEFT_RELEASE,
     MOUSE_RIGHT_PRESS,
-    MOUSE_RIGHT_RELEASE
+    MOUSE_RIGHT_RELEASE,
+    MOUSE_MOVE,
 };
 
 #define DEBUG(...)  // printf(2, __VA_ARGS__)

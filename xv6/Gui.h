@@ -26,6 +26,8 @@ struct TextEdit {
     int point1_row, point1_col; //第一个点的位置
     int point2_row, point2_col; //第二个点的位置
     char * parent_type; /* "FileListBuffer" */
+    int selecting;
+    int highlight_on;
 };
 
 struct FileNameControl {
@@ -98,7 +100,7 @@ struct FileSwitchBar {
     int searchInput;
 };
 
-#define TOOL_NUM 3
+#define TOOL_NUM 4
 
 struct ToolBar
 {

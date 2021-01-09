@@ -30,5 +30,6 @@ void move_to_pos(struct textframe *text, int r, int c);
 void LineEdit_set_str(struct textframe * text, char * str);
 void clear_cur_line(struct textframe * text);
 void move_cur_line_to_prev_line(struct textframe * text);
+int Search(struct textframe * edit, char * str);
 
 extern struct textframe * command_textframe;

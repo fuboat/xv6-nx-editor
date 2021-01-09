@@ -187,7 +187,8 @@ enum MSG_TYPE {
     MOUSE_LEFT_PRESS,
     MOUSE_LEFT_RELEASE,
     MOUSE_RIGHT_PRESS,
-    MOUSE_RIGHT_RELEASE
+    MOUSE_RIGHT_RELEASE,
+    MOUSE_MOVE,
 };
 
 void            add_kbd_msg(int c);
@@ -199,6 +200,7 @@ int             drawarea(const int xl, const int yl, const int width, const int 
 void            update();
 void            update_area(int xl, int yl, int width, int height);
 int             drawrect_force(const int xl, const int yl, const int width, const int height, int color);
+void            draw_mouse(int x, int y);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

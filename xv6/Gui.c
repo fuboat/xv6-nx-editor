@@ -5,7 +5,7 @@
 #include "Gui.h"
 #include "init_ascii.h"
 #include "fs.h"
-#include "sh.h"
+#include "highlight.h"
 
 #define RGB(r,g,b) ((r >> 3) << 11 | (g >> 2) << 5 | (b >> 3))
 #define AREA_ARGS(area) area.x, area.y, area.width, area.height
@@ -92,7 +92,6 @@ int draw_TextEdit(struct TextEdit *edit, struct Area parent_area) {
 
     // offset 的调整只尝试 10 次。
     if (edit == cursor_focus) {
-        
         for (int i = 0; i < 10; ++ i) {
 
             cursor_area = calc_current_area(
@@ -193,9 +192,30 @@ int draw_TextEdit(struct TextEdit *edit, struct Area parent_area) {
 
     for (int r = 0; r < text->maxrow; ++ r) {
         int len = strlen(text->data[r]);
-        for (int col = 0; col < len; ++ col) {
+
+        // 代码高亮的参数
+        int status = 0, count = 0, highlight_c = 0, hc = 0;
+
+        for (int col = 0; col < len; ++ col) {            
             // 枚举所有的字符
             unsigned char c = text->data[r][col];
+
+            // 根据高亮表，更新高亮状态。
+            if (hc <= col && edit->highlight_on) {
+                while (hc <= len) {
+                    int res = highlight_update(text->data[r][hc], &status, &highlight_c, &count);
+                    ++ hc;
+                    if (res >= 0) {
+                        break;
+                    }
+                    if (hc == len + 1) {
+                        highlight_c = 0;
+                        count = 0;
+                    }
+                }
+            }
+
+            int cur_c = col + count + 1 >= hc? highlight_c : 0;
 
             int is_han = (c >= 160 && col + 1 < len && (unsigned char) text->data[r][col+1] >= 160);
             int width = is_han? 16 : 8;
@@ -206,10 +226,11 @@ int draw_TextEdit(struct TextEdit *edit, struct Area parent_area) {
             if (c_area.x >= 0 && c_area.y >= 0 && c_area.width == width && c_area.height == 16) 
             {
                 if (is_han) {
-                    drawgbk(AREA_ARGS(c_area), get_gbk_point_by_c1_c2(c, (unsigned char) text->data[r][col + 1]));
+                    drawgbk_color(AREA_ARGS(c_area), cur_c, get_gbk_point_by_c1_c2(c, (unsigned char) text->data[r][col + 1]));
                 } else {
-                    drawarea(
-                        AREA_ARGS(c_area), 
+                    drawarea_color(
+                        AREA_ARGS(c_area),
+                        cur_c,
                         get_text_area(c));
                 }
             }
@@ -224,15 +245,20 @@ int draw_TextEdit(struct TextEdit *edit, struct Area parent_area) {
 int handle_mouse_TextEdit(struct TextEdit *edit, int x, int y, int mouse_opt) {
     mouse_pos_transform(edit->area, &x, &y);
 
-    cursor_focus = edit;
-    cursor_focus_type = 1;
-    move_to_pos(edit->text, y/16, x/8);
+    if (mouse_opt != MOUSE_MOVE) {
+        cursor_focus = edit;
+        cursor_focus_type = 1;
+        move_to_pos(edit->text, y/16, x/8);
+    }
     if(mouse_opt == MOUSE_LEFT_PRESS){
         edit->point1_row = y/16;
         edit->point1_col = x/8;
         edit->point2_row = -1;
         edit->point2_col = -1;
-    }else if(mouse_opt == MOUSE_LEFT_RELEASE){
+        edit->selecting = 1;
+    }else if(mouse_opt == MOUSE_MOVE || mouse_opt == MOUSE_LEFT_RELEASE){
+        if (!(edit->selecting)) return 0;
+
         if(edit->point1_row == y/16 && edit->point1_col == x/8){
 
         }else{
@@ -252,10 +278,15 @@ int handle_mouse_TextEdit(struct TextEdit *edit, int x, int y, int mouse_opt) {
                 edit->point2_row = edit->text->maxrow - 1;
             }
         }
+
+        if (mouse_opt == MOUSE_LEFT_RELEASE)
+            edit->selecting = 0;
         //}
         // DEBUG2("[GUI3: TextEdit] mouse in TextEdit, pos1 = (%d, %d), pos2(%d, %d), type = %d\n", 
         // edit->point1_row, edit->point1_col,
         // edit->point2_row, edit->point2_col, mouse_opt);
+    } else {
+        edit->selecting = 0;
     }
     
     return 0;
@@ -274,6 +305,7 @@ int handle_mouse_TextEdit(struct TextEdit *edit, int x, int y, int mouse_opt) {
 #define CTRL_C 3
 #define CTRL_V 22
 #define CTRL_F 6
+#define CTRL_X 24
 
 #define DEBUG_TEXT(...) // printf(0, __VA_ARGS__)
 
@@ -380,17 +412,27 @@ int handle_keyboard_TextEdit(struct TextEdit *edit, int c) {
         int start_row = text->cursor_row, start_col = text->cursor_col;
         DEBUG2("LALALA2: %d %d:\n", start_row,start_col);
 
-        DEBUG_TEXT("------- ctrl-v -------\ntext:");
-        // print_textframe(text);
-        DEBUG_TEXT("in_text:");
-        // print_textframe(clip);
+        DEBUG_TEXT("------- ctrl-v -------\ntext:\n");
+        print_textframe(text);
+        DEBUG_TEXT("in_text:\n");
+        print_textframe(clip);
+        DEBUG_TEXT("------- ctrl-v -------\n");
 
+        edit->point1_row = edit->text->cursor_row;
+        edit->point1_col = edit->text->cursor_col;
         text = textframe_insert(text, clip, start_row, start_col);
         LineEdit_set_str(edit->text, "");
         edit->text = text;
         // 计算粘贴后的光标位置
-        move_to_pos(text, edit->point1_row, edit->point1_col);
+        // move_to_pos(text, edit->point1_row, edit->point1_col);
         break;
+    }
+    case CTRL_X:
+    {
+        if(edit->point2_col != -1) {
+            handle_keyboard_TextEdit(edit, CTRL_C);
+            handle_keyboard_TextEdit(edit, BACKSPACE);
+        }
     }
     default: {
         if (32 <= c && c <= 126) {
@@ -562,7 +604,7 @@ int handle_keyboard_LineEdit(struct LineEdit *edit, int c) {
 
 int make_FileListBuffer(struct FileListBuffer ** pbuffer, struct BufferManager * parent) {
     struct FileListBuffer * buffer = malloc(sizeof (struct FileListBuffer));
-    buffer->area = (struct Area) { 10, 30, 150, 570, 0, 0 };
+    buffer->area = (struct Area) { 10, 30, 90, 570, 0, 0 };
     buffer->n_files = 0;
     buffer->files = malloc(sizeof(struct FileNameControl *) * 0);
     buffer->file_selected = 0;
@@ -685,6 +727,10 @@ int FileListBuffer_update_FileList(struct FileListBuffer * buffer) {
             memmove(p, de.name, DIRSIZ);
             p[DIRSIZ] = 0;
             if(stat(buf, &st) >= 0) {
+                if (strcmp(fmtname(buf), "console") == 0) {
+                    continue;
+                }
+
                 make_FileNameControl(buffer->files + file_index, buffer);
                 struct FileNameControl * file = buffer->files[file_index];
                 file->area.y = file_index * 16;
@@ -695,6 +741,8 @@ int FileListBuffer_update_FileList(struct FileListBuffer * buffer) {
             }
         }
     }
+
+    buffer->n_files = file_index;
 
     close(fd);
 
@@ -766,13 +814,13 @@ int rename_FileNameControl(struct FileNameControl * control){
                 && strcmp(filepath, control->parent->parent->fileSwitch->files[i]->filepathname) == 0){
                     DEBUGDF("path1: %s,path2: %s\n", control->parent->path, control->parent->parent->fileSwitch->files[i]->filepathname);
                     LineEdit_set_str(control->parent->parent->fileSwitch->buttons[i]->edit->text, control->edit->text->data[0]);
-                    int pos= 0;
+                    int pos= -1;
                     for(int j = 0; j < strlen(control->parent->parent->fileSwitch->files[i]->filepathname); j++){
                         if (control->parent->parent->fileSwitch->files[i]->filepathname[j] == '/'){
                             pos = j;
                         }
                     }
-                    strcpy(control->parent->parent->fileSwitch->files[i]->filepathname + pos, control->edit->text->data[0]);
+                    strcpy(control->parent->parent->fileSwitch->files[i]->filepathname + pos + 1, control->edit->text->data[0]);
                     DEBUGDF("newfilepathname: %s\n", control->parent->parent->fileSwitch->files[i]->filepathname);
                 }
             }
@@ -882,6 +930,8 @@ int make_BufferManager(struct BufferManager ** pmanager) {
     make_ToolBar(& manager->toolBar, manager);
     make_pinyinInput(& manager->pinyin, manager);
     make_StatusBar(& manager->statusBar, manager);
+    manager->statusBar->area.width = 800;
+    manager->statusBar->edit->area.width = 800;
     manager->focus = 0;
     *pmanager = manager;
     return 0;
@@ -907,6 +957,11 @@ int handle_mouse_BufferManager(struct BufferManager* manager, int x, int y, int 
 
     // DEBUG2("[GUI: BufferManager] mouse in BufferManager, pos = (%d, %d), type = %d\n", x, y, mouse_opt);
     manager->fileSwitch->searchInput = 0;
+
+    if (mouse_opt == MOUSE_MOVE && cursor_focus && cursor_focus_type == 1) {
+        return handle_mouse_FileSwitchBar((struct FileSwitchBar *) manager->fileSwitch, x, y, mouse_opt);
+    }
+
     if(isRename && manager->fileList->file_selected){
         int x1 = x, y1 = y;
         mouse_pos_transform(manager->fileList->area, &x1, &y1);
@@ -1155,6 +1210,7 @@ int handle_keyboard_FileSwitchBar(struct FileSwitchBar * fileSwitch, int c) {
                 //move_to_pos(fileSwitch->search->edit->text,0,0);
             }
             cursor_focus = fileSwitch->search->edit;
+            cursor_focus_type = 0;
             fileSwitch->searchInput  = 1;
             break;
         default:
@@ -1180,11 +1236,13 @@ int FileSwitchBar_open_file(struct FileSwitchBar * fileSwitch, char * filename) 
         fileSwitch->buttons[fileSwitch->n_files]->exec = Button_exec_switch_to_file;
         make_FileBuffer(fileSwitch->files + fileSwitch->n_files, fileSwitch);
         LineEdit_set_str(fileSwitch->buttons[fileSwitch->n_files]->edit->text, filename);
-        char filepath[512] = {};
+        char filepath[512] = {0};
         strcpy(filepath, fileSwitch->parent->fileList->path);
         strcpy(filepath + strlen(filepath), filename);
         FileBuffer_open_file(fileSwitch->files[fileSwitch->n_files], filepath);
         fileSwitch->current = fileSwitch->files[fileSwitch->n_files];
+        cursor_focus = fileSwitch->current->edit;
+        cursor_focus_type = 1;
         fileSwitch->n_files ++;
         return 0;
     }
@@ -1248,7 +1306,7 @@ int make_ToolBar(struct ToolBar ** pToolBar, struct BufferManager * parent) {
 int draw_ToolBar(struct ToolBar * pToolBar, struct Area area) {
     area = calc_current_area(area, pToolBar->area);
     int x = 0;
-    char tools[TOOL_NUM][20] = {"New File", "New Folder", "save"};
+    char tools[TOOL_NUM][20] = {"New File", "New Folder", "Save", "Highlight"};
     for (int i = 0; i < TOOL_NUM; ++ i) {
         struct Button * cur_button = pToolBar->buttons[i];
         cur_button->area.x = x;
@@ -1277,6 +1335,7 @@ int handle_mouse_ToolBar(struct ToolBar* pToolBar, int x, int y, int mouse_opt){
 int Button_exec_tool(struct Button * button) {
     // DEBUG("button_exec\n");
     // DEBUG(button->edit->text->data[0]);
+    // printf(0, "click Button %s\n", button->edit->text->data[0]);
     if(!button){
         return -1;
     }
@@ -1308,7 +1367,7 @@ int Button_exec_tool(struct Button * button) {
         DEBUGDF("mkdir: %d\n", s);
         free(fullpath);
         FileListBuffer_update_FileList(toolbar->parent->fileList);
-    }else if(!strcmp(tool_name, "save")){
+    }else if(!strcmp(tool_name, "Save")){
         DEBUGDF("\\\\\\ clicked save botton ------\n");
         if(strcmp(button->parent_type, "ToolBar")){
             return -1;
@@ -1322,7 +1381,11 @@ int Button_exec_tool(struct Button * button) {
         {
             DEBUG("no open file\n");
         }
-        
+    } else if(!strcmp(tool_name, "Highlight")) {
+        if (cursor_focus && cursor_focus_type == 1) {
+            int on = (((struct TextEdit *) cursor_focus)->highlight_on ^= 1);
+            LineEdit_set_str(toolbar->parent->statusBar->edit->text, (on? "Highlight Mode On" : "Highlight Mode Off"));
+        }
     }
     return -1;
 }
@@ -1621,7 +1684,7 @@ int handle_keyboard_SearchFrame(struct SearchFrame* search, int c){
         // int Search(Textframe * edit, char * str);
         if(search->parent->current && search->edit->text){
             // not found
-            //if(Search(search->parent->current->edit, search->edit->text) >= 0){
+            if(Search(search->parent->current->edit->text, search->edit->text->data[0]) >= 0){
                 struct TextEdit* edit = search->parent->current->edit;
                 //edit->text->cursor_col = 4;
                 //edit->text->cursor_row = 0;
@@ -1633,10 +1696,11 @@ int handle_keyboard_SearchFrame(struct SearchFrame* search, int c){
                 // edit->point1_col,edit->point1_row);
                 cursor_focus = edit;
             //  DEBUG2(" not found\n");
-            //}else
-            LineEdit_set_str(search->parent->parent->statusBar->edit->text, "No results.");
+            }else
+                LineEdit_set_str(search->parent->parent->statusBar->edit->text, "No results.");
         }
         DEBUG2("searching\n");
+        return 0;
     }else{
         return handle_keyboard_LineEdit(search->edit, c);
     }
@@ -1694,12 +1758,13 @@ int main() {
     gbk_point_init();
     char_point_init();
     pinyin_init();
-
-    link("NewFolder", "NewFolder2");
+    highlight_init();
 
     make_BufferManager(& manager);
 
     DEBUG("----- [GUI] BUffer Manager Init Finished. -----\n");
+
+    draw_BufferManager(manager, (struct Area) {0, 0, 800, 600, 0, 0});
 
     int msg = get_msg();
 
@@ -1714,6 +1779,7 @@ int main() {
         case MOUSE_LEFT_RELEASE:
         case MOUSE_RIGHT_PRESS:
         case MOUSE_RIGHT_RELEASE:
+        case MOUSE_MOVE:
             DEBUG("[GUI] mouse message get. type = %d\n", type);
             handle_mouse_BufferManager(manager, x, y, type);
             break;
@@ -1732,7 +1798,6 @@ int main() {
         
         if (msg == 0) {
             draw_BufferManager(manager, (struct Area) {0, 0, 800, 600, 0, 0});
-            // drawgbk(20, 20, 16, 16, get_gbk_point_by_offset(247744));
             update();
             
             do {

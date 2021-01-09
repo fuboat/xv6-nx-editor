@@ -291,12 +291,6 @@ struct textframe *textframe_extract(struct textframe *text, int start_row, int s
     res_text->row = 0;
     res_text->cursor_col = 0;
     res_text->cursor_row = 0;
-    // printf("extract \n");
-    // for (int i = 0; i < res_text->maxrow; i++)
-    // {
-    //     printf("extract res_text->data=%s\n", res_text->data[i]);
-    // }
-    // printf("\n");
     res_text->maxrow_capacity = res_text->maxrow;
     return res_text;
 }
@@ -352,139 +346,6 @@ struct textframe *textframe_delete(struct textframe *text, int start_row, int st
     printf(0, "i_res_text = %d\n", i_res_text);
 
     return res_text;
-/*
-    //不合法输入返回矫正
-    if (start_row < 0)
-    {
-        start_row = 0;
-    }
-    if (start_col < 0)
-    {
-        start_col = 0;
-    }
-    int start_len = strlen(text->data[start_row]);
-    int nflag = 0; //是否删去起始行换行符标志
-    if (start_col > start_len)
-    {
-        start_col = start_len;
-        nflag = 1; //保留换行符
-    }
-    if (end_row < 0 || end_row >= text->maxrow)
-    {
-        end_row = text->maxrow - 1;
-    }
-    int end_len = strlen(text->data[end_row]);
-    //if (end_col < 0 ) {
-    //    end_col = 0;
-    //}
-    struct textframe *res_text = (struct textframe *)malloc(sizeof(struct textframe));
-    //正常起始行与结束行合并为一行
-    int max_row = text->maxrow - (end_row - start_row);
-    //起始行保留换行符+1行
-    if (nflag)
-    {
-        max_row++;
-    }
-    //结束行删去换行符-1行
-    if (end_col >= end_len)
-    {
-        max_row--;
-    }
-
-    res_text->maxrow = max_row;
-    res_text->data = (char **)malloc(sizeof(char *) * max_row);
-    int index = 0;
-    int i = 0;
-    while (1)
-    {
-        if (index < start_row || index > end_row)
-        {
-            char *tmp = substr(text->data[index], 0, strlen(text->data[index]));
-            if (index == end_row + 1 && !nflag)
-            {
-                char *tmp2 = strcat(res_text->data[i], tmp, strlen(res_text->data[i]), strlen(tmp));
-                res_text->data[i] = tmp2;
-                //max_row--;
-                //res_text->maxrow = max_row;
-            }
-            else
-            {
-                res_text->data[i] = tmp;
-            }
-            index++;
-            i++;
-        }
-        else if (index == start_row)
-        {
-            if (start_row == end_row)
-            {
-                char *tmp1 = substr(text->data[index], 0, start_col);
-                char *tmp2 = substr(text->data[index], end_col + 1, end_len - end_col - 1);
-                res_text->data[i] = strcat(tmp1, tmp2, strlen(tmp1), strlen(tmp2));
-                i++;
-                index++;
-            }
-            else
-            {
-                if (start_col != 0)
-                {
-                    res_text->data[i] = substr(text->data[index], 0, start_col);
-                    if (nflag == 1)
-                    {
-                        i++;
-                    }
-                }
-                index = end_row;
-            }
-        }
-        else if (index == end_row)
-        {
-            char *tmp = substr(text->data[index], end_col + 1, end_len - end_col - 1);
-            if (nflag)
-            {
-                //free(res_text->data[i]);
-                res_text->data[i] = tmp;
-            }
-            else
-            {
-                char *tmp2 = strcat(res_text->data[i], tmp, strlen(res_text->data[i]), strlen(tmp));
-                //free(res_text->data[i]);
-                res_text->data[i] = tmp2;
-            }
-            if (end_col < end_len)
-            {
-                i++;
-                nflag = 1; //保留结束行的换行符
-            }
-            else
-            {
-                nflag = 0; //删除结束行的换行符
-            }
-            index++;
-        }
-        if (i >= max_row)
-        {
-            break;
-        }
-    }
-    res_text->col = text->col;
-    res_text->row = text->row;
-    res_text->cursor_col = text->cursor_col;
-    res_text->cursor_row = text->cursor_row;
-    // printf("delete \n");
-    // for (int i = 0; i < res_text->maxrow; i++)
-    // {
-    //     printf("delete res_text->data=%s\n", res_text->data[i]);
-    // }
-    // printf("\n");
-    //释放text空间
-    //for (int i = 0; i < text->maxrow;i++) {
-    //    free(text->data[i]);
-    //}
-    //free(text->data);
-    //free(text);
-    return res_text;
-    */
 }
 //插入一段文本
 struct textframe *textframe_insert(struct textframe *text, struct textframe *in_text, int start_row, int start_col)
@@ -495,232 +356,52 @@ struct textframe *textframe_insert(struct textframe *text, struct textframe *in_
 
     textframe_adjust_r_c(text, & start_row, & start_col, 0, 1);
 
-    if (start_row < 0)
-    {
-        start_row = 0;
-    }
-    if (start_col < 0)
-    {
-        start_col = 0;
-    }
-    int start_len = strlen(text->data[start_row]);
-    struct textframe *res_text = (struct textframe *)malloc(sizeof(struct textframe));
-    res_text->col = 0;
-    res_text->row = 0;
-    res_text->cursor_col = 0;
-    res_text->cursor_row = 0;
+    struct textframe * res_text = malloc(sizeof(struct textframe));
+    memset(res_text, 0, sizeof(struct textframe));
     res_text->maxrow = text->maxrow + in_text->maxrow - 1;
-    res_text->data = (char **)malloc(sizeof(char *) * res_text->maxrow);
-    int src_index = 0;
-    int in_index = 0;
-    int flag2 = start_row + in_text->maxrow;
-    int i = 0;
-    while (i < res_text->maxrow)
-    {
-        if (i < start_row || i > flag2)
-        {
-            //res_text->data[i] = (char*)malloc(sizeof(char));
-            res_text->data[i] = substr(text->data[src_index], 0, strlen(text->data[src_index]));
-            //printf("insert res_text->data[%d]=%s\n", i, res_text->data[i]);
-            //res_text->data[i] = text->data[src_index];
-            src_index++;
-            i++;
-        }
-        else if (i == start_row)
-        {
-            int len_tmp1 = start_col /*+ 1*/;
-            char *tmp1 = substr(text->data[src_index], 0, len_tmp1);
-            int len_tmp2 = strlen(in_text->data[in_index]);
-            char *tmp2 = substr(in_text->data[in_index], 0, len_tmp2);
-            if (flag2 == start_row)
-            {
-                res_text->data[i] = strcat(tmp1, tmp2, len_tmp1, len_tmp2);
-                len_tmp1 = strlen(text->data[src_index]) - start_col /*- 1*/;
-                tmp1 = substr(text->data[src_index], start_col /*+ 1*/, len_tmp1);
-                len_tmp2 = strlen(res_text->data[i]);
-                res_text->data[i] = strcat(res_text->data[i], tmp1, len_tmp2, len_tmp1);
-                //printf("insert res_text->data[%d]=%s\n", i, res_text->data[i]);
-                src_index++;
-                in_index++;
-                i++;
+    res_text->data = malloc(sizeof(char *) * res_text->maxrow);
+
+    for (int i = 0; i < res_text->maxrow; ++ i) {
+        char * curline;
+
+        if (i < start_row) {
+            curline = substr(text->data[i], 0, strlen(text->data[i]));
+        } else if (start_row < i && i < start_row + in_text->maxrow - 1) {
+            curline = substr(in_text->data[i - start_row], 0, strlen(in_text->data[i - start_row]));
+        } else if (i == start_row || i == start_row + in_text->maxrow - 1) {
+            char * left = substr(text->data[start_row], 0, start_col);
+            char * right = substr(text->data[start_row] + start_col, 0, strlen(text->data[start_row]) - start_col);
+
+            if (in_text->maxrow == 1) {
+                char * curline_left = strcat(left, in_text->data[0], strlen(left), strlen(in_text->data[0]));
+                curline = strcat(curline_left, right, strlen(curline_left), strlen(right));
+                res_text->cursor_row = i;
+                res_text->cursor_col = strlen(curline_left);
+                free(curline_left);
+            } else if (i == start_row) {
+                curline = strcat(left, in_text->data[0], strlen(left), strlen(in_text->data[0]));
+            } else if (i == start_row + in_text->maxrow - 1) {
+                curline = strcat(in_text->data[in_text->maxrow-1], right, strlen(in_text->data[in_text->maxrow-1]), strlen(right));
+                res_text->cursor_row = i;
+                res_text->cursor_col = strlen(in_text->data[in_text->maxrow-1]);
+            } else {
+                curline = 0;
             }
-            else
-            {
-                //插在起始行换行符后
-                /*if (start_col >= start_len)
-                {
-                    res_text->data[i] = tmp1;
-                    //printf("insert res_text->data[%d]=%s\n", i, res_text->data[i]);
-                    res_text->data[i + 1] = tmp2;
-                    //printf("insert res_text->data[%d]=%s\n", i + 1, res_text->data[i + 1]);
-                    src_index++;
-                    i = i + 2;
-                }
-                else*/
-                {
-                    res_text->data[i] = strcat(tmp1, tmp2, len_tmp1, len_tmp2);
-                    //printf("insert res_text->data[%d]=%s\n", i, res_text->data[i]);
-                    i++;
-                    flag2--;
-                }
-                in_index++;
-            }
+
+            free(left);
+            free(right);
+        } else {
+            curline = text->data[i - (in_text->maxrow-1)];
+            curline = substr(curline, 0, strlen(curline));
         }
-        else if (i < flag2)
-        {
-            res_text->data[i] = substr(in_text->data[in_index], 0, strlen(in_text->data[in_index]));
-            //printf("insert res_text->data[%d]=%s\n", i, res_text->data[i]);
-            in_index++;
-            i++;
-        }
-        else if (i == flag2 && flag2 != start_row)
-        {
-            int len_tmp1 = strlen(text->data[src_index]) - start_col /*- 1*/;
-            char *tmp1 = substr(text->data[src_index], start_col /*+ 1*/, len_tmp1);
-            //text起始行末尾没有剩余串，与下一行衔接
-            if (start_col >= start_len)
-            {
-                len_tmp1 = strlen(text->data[src_index]);
-                tmp1 = substr(text->data[src_index], 0, len_tmp1);
-            }
-            int len_tmp2 = strlen(in_text->data[in_index]);
-            char *tmp2 = substr(in_text->data[in_index], 0, len_tmp2);
-            res_text->data[i] = strcat(tmp2, tmp1, len_tmp2, len_tmp1);
-            //printf("insert res_text->data[%d]=%s\n", i, res_text->data[i]);
-            i++;
-            src_index++;
-            in_index++;
-        }
+
+        if (curline == 0) { curline = malloc(1); curline[0] = 0; }
+
+        res_text->data[i] = curline;
     }
-    /*
-    //释放text空间
-    for (int i = 0; i < text->maxrow; i++) {
-        free(text->data[i]);
-    }
-    free(text->data);
-    free(text);
-    //释放in_text空间
-    for (int i = 0; i < in_text->maxrow; i++) {
-        free(in_text->data[i]);
-    }
-    free(in_text->data);
-    free(in_text);*/
-    // printf("insert \n");
-    // for (int i = 0; i < res_text->maxrow; i++)
-    // {
-    //     printf("insert res_text->data[%d]=%s\n", i, res_text->data[i]);
-    // }
-    // printf("\n");
-    res_text->maxrow_capacity = res_text->maxrow;
+
     return res_text;
 }
-
-// int main()
-// {
-//     struct textframe *text = (struct textframe*)malloc(sizeof(struct textframe));
-//     memset(text, 0, sizeof(*text));
-//     //char* filename = "1.txt";
-//     char *filename = (char *)malloc(sizeof(char)*100);
-//     //strcpy(filename, "hankaku-test.txt");
-//     //strcpy(filename, "123.cpp");
-//     strcpy(filename, "in.txt");
-//     std::cout<<"read filename=>" << filename << std::endl;
-//     //int t = textframe_write(text, filename);
-//     int t = textframe_read(text, filename);
-//     struct textframe* res = (struct textframe*)malloc(sizeof(struct textframe));
-//     //memset(res, 0, sizeof(*res));
-//     //res = textframe_delete(text, 0, 0, 50, 0);
-
-//     /*
-//     //extract测试
-//     //提取第0-50行，提取第0行换行符&不提取第8行换行符
-//     memset(res, 0, sizeof(*res));
-//     res = textframe_extract(text, 0, 20, 8, 0);
-//     //不提取第0行换行符&不提取第50行换行符
-//     memset(res, 0, sizeof(*res));
-//     res = textframe_extract(text, 0, 100, 8, 0);
-//     //不提取第0行换行符&不提取第50行换行符
-//     memset(res, 0, sizeof(*res));
-//     res = textframe_extract(text, 0, 100, 8, 16);
-//     //不提取第0行换行符&提取第50行换行符
-//     memset(res, 0, sizeof(*res));
-//     res = textframe_extract(text, 0, 100, 8, 100);
-//     //提取第0行换行符&提取第50行换行符
-//     memset(res, 0, sizeof(*res));
-//     res = textframe_extract(text, 0, 20, 8, 100);
-//     */
-
-//     /*
-//     //delete测试
-//     //删掉第0-50行，不保留第0行换行符&保留第50行换行符
-//     memset(res, 0, sizeof(*res));
-//     res = textframe_delete(text, 0, 20, 50, 0);
-//     //保留第0行换行符&保留第50行换行符
-//     memset(res, 0, sizeof(*res));
-//     res = textframe_delete(text, 0, 100, 50, 0);
-//     //保留第0行换行符&保留第50行换行符
-//     memset(res, 0, sizeof(*res));
-//     res = textframe_delete(text, 0, 100, 50, 62);
-//     //保留第0行换行符&不保留第50行换行符
-//     memset(res, 0, sizeof(*res));
-//     res = textframe_delete(text, 0, 100, 50, 100);
-//     //不保留第0行换行符&不保留第50行换行符
-//     memset(res, 0, sizeof(*res));
-//     res = textframe_delete(text, 0, 20, 50, 100);
-//     */
-
-//     struct textframe* res2 = (struct textframe*)malloc(sizeof(struct textframe));
-//     struct textframe* res3 = (struct textframe*)malloc(sizeof(struct textframe));
-
-//     /*
-//     //删除时保留第0行换行符&保留第50行换行符
-//     memset(res, 0, sizeof(*res));
-//     res = textframe_extract(text, 0, 20, 50, 0);
-//     memset(res2, 0, sizeof(*res2));
-//     res2 = textframe_delete(text, 0, 20, 50, 0);
-//     memset(res3, 0, sizeof(*res));
-//     res3 = textframe_insert(res2, res, 0, 20);
-//     */
-//     /*
-//     //删除时保留第0行换行符&保留第50行换行符
-//     memset(res, 0, sizeof(*res));
-//     res = textframe_extract(text, 0, 100, 50, 0);
-//     memset(res2, 0, sizeof(*res2));
-//     res2 = textframe_delete(text, 0, 100, 50, 0);
-//     memset(res3, 0, sizeof(*res));
-//     res3 = textframe_insert(res2, res, 0, 100);
-//     */
-//     /*
-//     //删除时保留第0行换行符&保留第50行换行符
-//     memset(res, 0, sizeof(*res));
-//     res = textframe_extract(text, 0, 100, 50, 62);
-//     memset(res2, 0, sizeof(*res2));
-//     res2 = textframe_delete(text, 0, 100, 50, 62);
-//     memset(res3, 0, sizeof(*res));
-//     res3 = textframe_insert(res2, res,0, 100);
-//     */
-//     /*
-//     //删除时保留第0行换行符&不保留第50行换行符
-//     memset(res, 0, sizeof(*res));
-//     res = textframe_extract(text, 0, 100, 50, 100);
-//     memset(res2, 0, sizeof(*res2));
-//     res2 = textframe_delete(text, 0, 100, 50, 100);
-//     memset(res3, 0, sizeof(*res));
-//     res3 = textframe_insert(res2, res, 0, 100);
-//     */
-//     ///*
-//     //删除时不保留第0行换行符&不保留第50行换行符
-//     memset(res, 0, sizeof(*res));
-//     res = textframe_extract(text, 0, 20, 50, 100);
-//     memset(res2, 0, sizeof(*res2));
-//     res2 = textframe_delete(text, 0, 20, 50, 100);
-//     memset(res3, 0, sizeof(*res));
-//     res3 = textframe_insert(res2, res, 0, 20);
-//     //*/
-//     strcpy(filename, "out.txt");
-//     std::cout << "write filename=>" << filename << std::endl;
-//     t = textframe_write(res3, filename);
-// }
 
 void putc_to_str(struct textframe *text, int ch)
 {
@@ -891,5 +572,38 @@ void move_cur_line_to_prev_line(struct textframe * text) {
 }
 
 int Search(struct textframe * edit, char * str) {
-    
+    int str_len = strlen(str);
+
+    if (str_len < 0) return -1;
+
+    for (int i = edit->cursor_row; i < edit->maxrow; ++ i) {
+        char * S = edit->data[i];
+        int len = strlen(S);
+        for (int j = i == edit->cursor_row? edit->cursor_col : 0; j < len; ++ j) {
+            int k = j;
+            int l = 0;
+            while (k < len && l < str_len && S[k++] == str[l++]);
+            if (l == str_len && S[k-1] == str[l-1]) {
+                edit->cursor_row = i;
+                edit->cursor_col = k;
+                return 0;
+            }
+        }
+    }
+
+    if (edit->cursor_row != 0 || edit->cursor_col != 0) {
+        int row = edit->cursor_row;
+        int col = edit->cursor_col;
+        edit->cursor_row = 0;
+        edit->cursor_col = 0;
+        if (Search(edit, str) >= 0) {
+            return 1;
+        } else {
+            edit->cursor_row = row;
+            edit->cursor_col = col;
+            return -1;
+        }
+    } else {
+        return -1;
+    }
 }

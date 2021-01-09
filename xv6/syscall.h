@@ -27,3 +27,5 @@
 #define SYS_get_msg 25
 #define SYS_addcomand_c 27
 #define SYS_drawgbk 28
+#define SYS_drawarea_color 29
+#define SYS_drawgbk_color 30
