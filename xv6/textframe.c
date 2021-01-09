@@ -52,7 +52,7 @@ char *substr(char *src, int start_index, int len)
     {
         len = 0;
     }
-    char *dst = (char *)malloc(sizeof(char) * len);
+    char *dst = (char *)malloc(sizeof(char) * (len + 1));
     for (int i = 0; i < len; i++)
     {
         dst[i] = src[start_index + i];
@@ -136,6 +136,8 @@ int textframe_read(struct textframe *text, char *filename)
         move_to_pos(text, 0, 0);
 
     close(fd);
+
+    text->maxrow_capacity = text->maxrow;
     return 0;
 }
 
@@ -173,6 +175,7 @@ int textframe_write(struct textframe *text, char *filename)
     close(fd);
     //fd.close();
     printf("write over\n");
+    text->maxrow_capacity = text->maxrow;
     return 0;
 }
 
@@ -255,11 +258,59 @@ struct textframe *textframe_extract(struct textframe *text, int start_row, int s
     //     printf("extract res_text->data=%s\n", res_text->data[i]);
     // }
     // printf("\n");
+    res_text->maxrow_capacity = res_text->maxrow;
     return res_text;
 }
 //删除一段文本
 struct textframe *textframe_delete(struct textframe *text, int start_row, int start_col, int end_row, int end_col)
 {
+    struct textframe *res_text = (struct textframe *)malloc(sizeof(struct textframe));
+    memset(res_text, 0, sizeof(struct textframe));
+
+    if (start_row < 0) start_row = 0;
+    if (start_col < 0) start_col = 0;
+    if (end_row >= text->maxrow) end_row = text->maxrow - 1, end_col = 0;
+
+    res_text->maxrow_capacity = res_text->maxrow = text->maxrow;
+    res_text->data = malloc(sizeof(char*) * res_text->maxrow_capacity);
+
+    int i_res_text = 0;
+
+    for (int i_text = 0; i_text < text->maxrow; ++ i_text) {
+        if (i_text > start_row && i_text < end_row) {
+            // 被完整删掉的行，忽略。
+            continue;
+        }
+
+        char * text_cur_line = text->data[i_text];
+        char * res_cur_line;
+        
+        if (i_text < start_row || i_text > end_row) {
+            // 完整复制的行。
+            res_cur_line = substr(text_cur_line, 0, strlen(text_cur_line));
+        } else {
+            char * left = substr(text->data[start_row], 0, start_col);
+            char * right = substr(text->data[end_row], end_col + 1, strlen(text_cur_line) - end_col - 1);
+
+            res_cur_line = strcat(left, right, strlen(left), strlen(right));
+            free(left), free(right);
+            i_text = end_row;
+        }
+
+        if (res_cur_line == 0) { res_cur_line = malloc(1); res_cur_line[0] = 0; }
+
+        res_text->data[i_res_text] = res_cur_line;
+
+        ++ i_res_text;
+    }
+
+    res_text->maxrow = i_res_text;
+    res_text->maxrow_capacity = i_res_text;
+
+    printf(0, "i_res_text = %d\n", i_res_text);
+
+    return res_text;
+/*
     //不合法输入返回矫正
     if (start_row < 0)
     {
@@ -391,12 +442,13 @@ struct textframe *textframe_delete(struct textframe *text, int start_row, int st
     //free(text->data);
     //free(text);
     return res_text;
+    */
 }
 //插入一段文本
 struct textframe *textframe_insert(struct textframe *text, struct textframe *in_text, int start_row, int start_col)
 {
     //为了便于调用，将start_col更改为插入文本第一个字符的坐标
-    start_col = start_col - 1;
+    // start_col = start_col - 1;
     //不合法输入返回矫正
     if (start_row < 0)
     {
@@ -431,15 +483,15 @@ struct textframe *textframe_insert(struct textframe *text, struct textframe *in_
         }
         else if (i == start_row)
         {
-            int len_tmp1 = start_col + 1;
+            int len_tmp1 = start_col /*+ 1*/;
             char *tmp1 = substr(text->data[src_index], 0, len_tmp1);
             int len_tmp2 = strlen(in_text->data[in_index]);
             char *tmp2 = substr(in_text->data[in_index], 0, len_tmp2);
             if (flag2 == start_row)
             {
                 res_text->data[i] = strcat(tmp1, tmp2, len_tmp1, len_tmp2);
-                len_tmp1 = strlen(text->data[src_index]) - start_col - 1;
-                tmp1 = substr(text->data[src_index], start_col + 1, len_tmp1);
+                len_tmp1 = strlen(text->data[src_index]) - start_col /*- 1*/;
+                tmp1 = substr(text->data[src_index], start_col /*+ 1*/, len_tmp1);
                 len_tmp2 = strlen(res_text->data[i]);
                 res_text->data[i] = strcat(res_text->data[i], tmp1, len_tmp2, len_tmp1);
                 //printf("insert res_text->data[%d]=%s\n", i, res_text->data[i]);
@@ -450,7 +502,7 @@ struct textframe *textframe_insert(struct textframe *text, struct textframe *in_
             else
             {
                 //插在起始行换行符后
-                if (start_col >= start_len)
+                /*if (start_col >= start_len)
                 {
                     res_text->data[i] = tmp1;
                     //printf("insert res_text->data[%d]=%s\n", i, res_text->data[i]);
@@ -459,7 +511,7 @@ struct textframe *textframe_insert(struct textframe *text, struct textframe *in_
                     src_index++;
                     i = i + 2;
                 }
-                else
+                else*/
                 {
                     res_text->data[i] = strcat(tmp1, tmp2, len_tmp1, len_tmp2);
                     //printf("insert res_text->data[%d]=%s\n", i, res_text->data[i]);
@@ -478,8 +530,8 @@ struct textframe *textframe_insert(struct textframe *text, struct textframe *in_
         }
         else if (i == flag2 && flag2 != start_row)
         {
-            int len_tmp1 = strlen(text->data[src_index]) - start_col - 1;
-            char *tmp1 = substr(text->data[src_index], start_col + 1, len_tmp1);
+            int len_tmp1 = strlen(text->data[src_index]) - start_col /*- 1*/;
+            char *tmp1 = substr(text->data[src_index], start_col /*+ 1*/, len_tmp1);
             //text起始行末尾没有剩余串，与下一行衔接
             if (start_col >= start_len)
             {
@@ -514,6 +566,7 @@ struct textframe *textframe_insert(struct textframe *text, struct textframe *in_
     //     printf("insert res_text->data[%d]=%s\n", i, res_text->data[i]);
     // }
     // printf("\n");
+    res_text->maxrow_capacity = res_text->maxrow;
     return res_text;
 }
 
@@ -704,7 +757,7 @@ void new_line_to_editor(struct textframe *text)
     int len = text->maxrow;
     char **new_data;
 
-    if (len >= text->maxrow_capacity)
+    if (len + 1 >= text->maxrow_capacity)
     {
         // data 不足以存储这么多行：重新为 data 分配空间
         new_data = malloc(sizeof(char *) * (len * 2));
