@@ -1270,6 +1270,7 @@ int Button_exec_tool(struct Button * button) {
         char * fullpath = strcat(pathname, "NewFolder", strlen(pathname), strlen("NewFolder"));
         int s = mkdir(fullpath);
         DEBUGDF("mkdir: %d\n", s);
+        free(fullpath);
         FileListBuffer_update_FileList(toolbar->parent->fileList);
     }else if(!strcmp(tool_name, "save")){
         DEBUGDF("\\\\\\ clicked save botton ------\n");
