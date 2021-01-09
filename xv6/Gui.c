@@ -302,13 +302,18 @@ int handle_keyboard_TextEdit(struct TextEdit *edit, int c) {
 
     case LEFT_ARROW: case BACKSPACE:{
         if(edit->point2_col == -1){
-            move_to_previous_char(text);
+            if (c == LEFT_ARROW)  move_to_previous_char(text);
         }else{
             move_to_pos(text, edit->point1_row, edit->point1_col);
         }
         if (c == BACKSPACE) {
-            if(edit->point2_col == -1){
-                backspace_to_str(text);
+            if(edit->point2_col == -1) {
+                if (text->cursor_col > 0) {
+                    move_to_previous_char(text);
+                    backspace_to_str(text);
+                } else {
+                    move_cur_line_to_prev_line(text);
+                }
             }else{
                 text = textframe_delete(text, edit->point1_row, edit->point1_col, 
                                               edit->point2_row, edit->point2_col);
