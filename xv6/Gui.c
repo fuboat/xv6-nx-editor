@@ -317,9 +317,9 @@ int handle_keyboard_TextEdit(struct TextEdit *edit, int c) {
                                               edit->point2_row, edit->point2_col);
                 LineEdit_set_str(edit->text, "");
                 edit->text = text;
+                move_to_pos(text, edit->point1_row, edit->point1_col);
             }
         }
-        move_to_pos(text, edit->point1_row, edit->point1_col);
         edit->point2_col = -1;
         edit->point2_row = -1;
         break;
