@@ -268,6 +268,7 @@ int handle_mouse_TextEdit(struct TextEdit *edit, int x, int y, int mouse_opt) {
 #define RIGHT_ARROW 229
 #define UP_ARROW    226
 #define DOWN_ARROW  227
+#define DELETE 233
 #define CTRL_S 19
 #define TAB 9
 #define CTRL_C 3
@@ -519,7 +520,6 @@ int handle_keyboard_LineEdit(struct LineEdit *edit, int c) {
     // case DOWN_ARROW:
     //     move_to_next_line(&text);
     //     break;
-
     default: {
         if (32 <= c && c <= 126) {
             putc_to_str(text, c);
@@ -721,12 +721,19 @@ int handle_keyboard_FileNameControl(struct FileNameControl * control, int c) {
 
 int rename_FileNameControl(struct FileNameControl * control){
     isRename = 0;
+    int fileflag = File_isDir(control->oldName);
     if(strcmp(control->edit->text->data[0], control->oldName)){
-        if(link(control->oldName, control->edit->text->data[0]) < 0){
-            DEBUGDF("link failed\n");
+        if(!fileflag){
+            if(link(control->oldName, control->edit->text->data[0]) < 0){
+                DEBUGDF("link failed\n");
+            }
+            if(unlink(control->oldName) < 0){
+                DEBUGDF("unlink failed\n");
+            }
         }
-        if(unlink(control->oldName) < 0){
-            DEBUGDF("unlink failed\n");
+        else {
+            // 
+            return 0;
         }
         FileListBuffer_update_FileList(control->parent);
         DEBUGDF("old: %s,new: %s\n", control->oldName, control->edit->text->data[0]);
@@ -888,11 +895,20 @@ int handle_keyboard_BufferManager(struct BufferManager * manager, int c) {
               handle_keyboard_pinyinInput(manager->pinyin, c) >= 0) {
         return 0;
     }
-    else if (isRename && manager->focus == manager->fileList)
+    else if (isRename && manager->focus == manager->fileList){
         return handle_keyboard_FileListBuffer(manager->fileList, c);
+    }
     else if (manager->focus == manager->fileSwitch) {
         return handle_keyboard_FileSwitchBar(manager->fileSwitch, c);
-    }  else {
+    }
+    else if (c == DELETE){
+        if (manager->fileList->file_selected){
+            DEBUGDF("to delete: %s\n", manager->fileList->file_selected->edit->text->data[0]);
+            unlink(manager->fileList->file_selected->edit->text->data[0]);
+            FileListBuffer_update_FileList(manager->fileList);
+        }
+    }  
+    else {
         return 0;
     }
 }
@@ -1214,6 +1230,7 @@ int Button_exec_tool(struct Button * button) {
         if (open(fullfilename, O_CREATE) < 0){
             DEBUGDF("createFile Fail!\n");
         }
+        free(fullfilename);
         FileListBuffer_update_FileList(toolbar->parent->fileList);
     }else if(!strcmp(tool_name, "New Folder")){
         DEBUGDF("\\\\\\ clicked new folder botton ------\n");
@@ -1223,6 +1240,7 @@ int Button_exec_tool(struct Button * button) {
         char * fullpath = strcat(pathname, "New Folder", strlen(pathname), strlen("New Folder"));
         int s = mkdir(fullpath);
         DEBUGDF("mkdir: %d\n", s);
+        free(fullpath);
         FileListBuffer_update_FileList(toolbar->parent->fileList);
     }else if(!strcmp(tool_name, "save")){
         DEBUGDF("\\\\\\ clicked save botton ------\n");
