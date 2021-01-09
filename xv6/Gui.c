@@ -275,7 +275,7 @@ int handle_mouse_TextEdit(struct TextEdit *edit, int x, int y, int mouse_opt) {
 #define CTRL_V 22
 #define CTRL_F 6
 
-#define DEBUG_TEXT(...) printf(0, __VA_ARGS__)
+#define DEBUG_TEXT(...) // printf(0, __VA_ARGS__)
 
 void print_textframe(struct textframe * text) {
     int i;
@@ -381,9 +381,9 @@ int handle_keyboard_TextEdit(struct TextEdit *edit, int c) {
         DEBUG2("LALALA2: %d %d:\n", start_row,start_col);
 
         DEBUG_TEXT("------- ctrl-v -------\ntext:");
-        print_textframe(text);
+        // print_textframe(text);
         DEBUG_TEXT("in_text:");
-        print_textframe(clip);
+        // print_textframe(clip);
 
         text = textframe_insert(text, clip, start_row, start_col);
         LineEdit_set_str(edit->text, "");
@@ -813,12 +813,13 @@ int handle_mouse_FileBuffer(struct FileBuffer * buffer, int x, int y, int mouse_
     return handle_mouse_TextEdit(buffer->edit, x, y, mouse_opt);
 }
 
+int FileBuffer_save_file(struct FileBuffer * buffer, char * filepathname);
+
 int handle_keyboard_FileBuffer(struct FileBuffer * buffer, int c) {
-    struct textframe *text = buffer->edit->text;
     switch (c)
     {
         case CTRL_S:
-            FileBuffer_save_file(buffer, buffer->filepathname);
+            return FileBuffer_save_file(buffer, buffer->filepathname);
             break;
         default:
             return handle_keyboard_TextEdit(buffer->edit, c);
@@ -949,6 +950,7 @@ int handle_keyboard_BufferManager(struct BufferManager * manager, int c) {
             unlink(manager->fileList->file_selected->edit->text->data[0]);
             FileListBuffer_update_FileList(manager->fileList);
         }
+        return 0;
     }  
     else {
         return 0;
@@ -1173,7 +1175,6 @@ int FileSwitchBar_open_file(struct FileSwitchBar * fileSwitch, char * filename) 
         char * filepath = fileSwitch->parent->fileList->path;
         char * lastpath = (char *)malloc(strlen(filepath) + 2);
         memset(lastpath, 0, strlen(filepath) + 2);
-        int pos = -1;
         DEBUGDF("filename = %s\n", filename);
         if (strcmp(filename, ".") == 0) {
             ;
@@ -1664,9 +1665,6 @@ int draw_StatusBar(struct StatusBar* statusBar, struct Area area){
  * 输入法在输入框中有字符时，能够识别： a-z  ' , . 1-5
  * 没有字符时，能够识别 a-z
  */
-int get_pinyinInput_status(struct PinyinInput * pinyin) {
-
-}
 
 /*********************
  * 

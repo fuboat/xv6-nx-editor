@@ -218,6 +218,9 @@ int textframe_write(struct textframe *text, char *filename)
 //提取一段文本
 struct textframe *textframe_extract(struct textframe *text, int start_row, int start_col, int end_row, int end_col)
 {
+    textframe_adjust_r_c(text, & start_row, & start_col, 0, -1);
+    textframe_adjust_r_c(text, & end_row, & end_col, 1, 1);
+
     //不合法输入返回矫正
     if (start_row < 0)
     {
@@ -300,6 +303,9 @@ struct textframe *textframe_extract(struct textframe *text, int start_row, int s
 //删除一段文本
 struct textframe *textframe_delete(struct textframe *text, int start_row, int start_col, int end_row, int end_col)
 {
+    textframe_adjust_r_c(text, & start_row, & start_col, 0, -1);
+    textframe_adjust_r_c(text, & end_row, & end_col, 1, 1);
+
     struct textframe *res_text = (struct textframe *)malloc(sizeof(struct textframe));
     memset(res_text, 0, sizeof(struct textframe));
 
@@ -486,6 +492,9 @@ struct textframe *textframe_insert(struct textframe *text, struct textframe *in_
     //为了便于调用，将start_col更改为插入文本第一个字符的坐标
     // start_col = start_col - 1;
     //不合法输入返回矫正
+
+    textframe_adjust_r_c(text, & start_row, & start_col, 0, 1);
+
     if (start_row < 0)
     {
         start_row = 0;
@@ -879,4 +888,8 @@ void move_cur_line_to_prev_line(struct textframe * text) {
         -- text->maxrow;
         move_to_pos(text, text->cursor_row - 1, -1);
     }
+}
+
+int Search(struct textframe * edit, char * str) {
+    
 }
