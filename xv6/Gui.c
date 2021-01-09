@@ -1455,9 +1455,9 @@ int handle_keyboard_SearchFrame(struct SearchFrame* search, int c){
                 struct TextEdit* edit = search->parent->current->edit;
                 //edit->text->cursor_col = 4;
                 //edit->text->cursor_row = 0;
-                edit->point2_col = edit->text->cursor_col;
+                edit->point2_col = edit->text->cursor_col - 1;
                 edit->point2_row = edit->text->cursor_row;
-                edit->point1_col = edit->text->cursor_col - strlen(search->edit->text->data[0]) + 1;
+                edit->point1_col = edit->text->cursor_col - strlen(search->edit->text->data[0]);
                 edit->point1_row = edit->text->cursor_row;
                 // DEBUG2("there %d %d %d %d\n",edit->point2_col, edit->point2_row,
                 // edit->point1_col,edit->point1_row);
