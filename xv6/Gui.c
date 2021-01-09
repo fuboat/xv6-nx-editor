@@ -275,6 +275,14 @@ int handle_mouse_TextEdit(struct TextEdit *edit, int x, int y, int mouse_opt) {
 #define CTRL_V 22
 #define CTRL_F 6
 
+#define DEBUG_TEXT(...) printf(0, __VA_ARGS__)
+
+void print_textframe(struct textframe * text) {
+    int i;
+    for (i = 0; i < text->maxrow; ++ i)
+        DEBUG_TEXT("%s\n", text->data[i]);
+}
+
 int handle_keyboard_TextEdit(struct TextEdit *edit, int c) {
     struct textframe *text = edit->text;
 
@@ -367,6 +375,12 @@ int handle_keyboard_TextEdit(struct TextEdit *edit, int c) {
         DEBUG2(clip->data[0]);
         int start_row = text->cursor_row, start_col = text->cursor_col;
         DEBUG2("LALALA2: %d %d:\n", start_row,start_col);
+
+        DEBUG_TEXT("------- ctrl-v -------\ntext:");
+        print_textframe(text);
+        DEBUG_TEXT("in_text:");
+        print_textframe(clip);
+
         text = textframe_insert(text, clip, start_row, start_col);
         LineEdit_set_str(edit->text, "");
         edit->text = text;
@@ -487,7 +501,7 @@ int handle_mouse_LineEdit(struct LineEdit *edit, int x, int y, int mouse_opt) {
     mouse_pos_transform(edit->area, &x, &y);
 
     cursor_focus = edit;
-    //cursor_focus = 0;
+    cursor_focus_type = 0;
     move_to_pos(edit->text, y/16, x/8);
     DEBUG("[GUI: LineEdit] mouse in LineEdit, pos = (%d, %d), type = %d\n", x, y, mouse_opt);
 
@@ -1145,13 +1159,13 @@ int FileSwitchBar_open_file(struct FileSwitchBar * fileSwitch, char * filename) 
             if (strcmp(fileSwitch->parent->fileList->path, "") == 0){
                 return 0;
             }
-            for (int i = 0; i < strlen(filepath) - 1; i++){
+            for (int i = 0; i < strlen(filepath)-1; i++){
                 if(filepath[i] == '/'){
                     pos = i;
                 }
             }
             for (int i = 0; i <= pos; i++) {
-                lastpath += filepath[i];
+                lastpath[i] = filepath[i];
             }
             if (pos == -1) {
                 strcpy(lastpath, "");
@@ -1268,11 +1282,12 @@ int Button_exec_tool(struct Button * button) {
         // 新目录填入filelist 显示untitled并调用重命名
         char * pathname = toolbar->parent->fileList->path;
         DEBUGDF("mkdirpath: %s\n", toolbar->parent->fileList->path);
-        char * fullpath = strcat(pathname, "New Folder", strlen(pathname), strlen("New Folder"));
+        char * fullpath = strcat(pathname, "NewFolder", strlen(pathname), strlen("NewFolder"));
         int s = mkdir(fullpath);
         DEBUGDF("mkdir: %d\n", s);
         free(fullpath);
         FileListBuffer_update_FileList(toolbar->parent->fileList);
+        free(fullpath);
     }else if(!strcmp(tool_name, "save")){
         DEBUGDF("\\\\\\ clicked save botton ------\n");
         if(strcmp(button->parent_type, "ToolBar")){
@@ -1512,6 +1527,8 @@ int main() {
     gbk_point_init();
     char_point_init();
     pinyin_init();
+
+    link("NewFolder", "NewFolder2");
 
     make_BufferManager(& manager);
 
