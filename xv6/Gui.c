@@ -874,10 +874,11 @@ int handle_keyboard_BufferManager(struct BufferManager * manager, int c) {
         manager->pinyin->on ^= 1;
         printf(0, "is pinyin on: %d\n", manager->pinyin->on);
         return 0;
-    } else if(manager->pinyin->on && (('a' <= c && c <= 'z') || ('0' <= c && c <= '9') || c == ENTER || c == BACKSPACE || c == ',' || c == '.')) {
-        // TODO:
-        return handle_keyboard_pinyinInput(manager->pinyin, c);
-    } else if (isRename && manager->focus == manager->fileList)
+    } else if(manager->pinyin->on && (('a' <= c && c <= 'z') || ('0' <= c && c <= '9') || c == ENTER || c == BACKSPACE || c == ',' || c == '.') && 
+              handle_keyboard_pinyinInput(manager->pinyin, c) >= 0) {
+        return 0;
+    }
+    else if (isRename && manager->focus == manager->fileList)
         return handle_keyboard_FileListBuffer(manager->fileList, c);
     else if (manager->focus == manager->fileSwitch) {
         return handle_keyboard_FileSwitchBar(manager->fileSwitch, c);
@@ -1228,6 +1229,12 @@ int draw_pinyinInput(struct PinyinInput * pinyin, struct Area area) {
 int handle_keyboard_pinyinInput(struct PinyinInput * pinyin, int c) {
     struct textframe * text = pinyin->edit->text;
 
+    // 当输入框中没有字符时，不识别字母以外的其他符号。
+    if (text->data[0][0] == '\0' && !('a' <= c && c <= 'z')) {
+        return -1;
+    }
+
+
     if (('a' <= c && c <= 'z') || c == BACKSPACE || c == ',' || c == '.') {
         if (c == ',') {
             if (pinyin->page > 0) -- pinyin->page;
@@ -1296,6 +1303,15 @@ int handle_keyboard_pinyinInput(struct PinyinInput * pinyin, int c) {
     } else {
         return -1;
     }
+}
+
+/*
+ * 用于获取输入法当前的状态。
+ * 输入法在输入框中有字符时，能够识别： a-z  ' , . 1-5
+ * 没有字符时，能够识别 a-z
+ */
+int get_pinyinInput_status(struct PinyinInput * pinyin) {
+
 }
 
 /*********************

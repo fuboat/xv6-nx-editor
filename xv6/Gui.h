@@ -173,3 +173,4 @@ int Button_exec_tool(struct Button * button);
 int make_pinyinInput(struct PinyinInput **, struct BufferManager * parent);
 int draw_pinyinInput(struct PinyinInput *, struct Area area);
 int handle_keyboard_pinyinInput(struct PinyinInput *, int c);
+int get_pinyinInput_status(struct PinyinInput *);
