@@ -772,10 +772,10 @@ int make_FileBuffer(struct FileBuffer ** pbuffer, struct FileSwitchBar * parent)
     struct FileBuffer * buffer = malloc(sizeof(struct FileBuffer));
     memset(buffer, 0, sizeof(struct FileBuffer));
 
-    buffer->area = (struct Area) { 0, 20, 700, 200, 0, 0 };
+    buffer->area = (struct Area) { 0, 20, 700, 400, 0, 0 };
     make_TextEdit(& buffer->edit, buffer, "FileBuffer");
     buffer->parent = parent;
-    buffer->edit->area = (struct Area) { 0, 0, 700, 200, 0, 0 };
+    buffer->edit->area = (struct Area) { 0, 0, 700, 400, 0, 0 };
     
     memset(buffer->filepathname, 0, sizeof(buffer->filepathname));
 
@@ -1300,7 +1300,7 @@ int Button_exec_tool(struct Button * button) {
 int make_pinyinInput(struct PinyinInput ** pPinyin, struct BufferManager * parent) {
     struct PinyinInput * pinyin = malloc(sizeof(struct PinyinInput));
     
-    pinyin->area = (struct Area) { 400, 400, 200, 32, 0, 0 };
+    pinyin->area = (struct Area) { 600, 548, 200, 32, 0, 0 };
     pinyin->page = 0;
     pinyin->on = 0;
     make_TextEdit(& pinyin->edit, parent, "pinyinInput");
@@ -1562,7 +1562,7 @@ int make_SearchFrame(struct SearchFrame** psearch, struct FileSwitchBar* parent)
     make_LineEdit(&search->edit, search, "SearchFrame");
     
     search->parent = parent;
-    search->area = (struct Area) {500, 250, 100, 18, 0, 0 };;
+    search->area = (struct Area) {500, 0, 200, 18, 0, 0 };;
 
     *psearch = search;
 
