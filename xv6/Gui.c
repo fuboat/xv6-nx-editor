@@ -722,7 +722,13 @@ int handle_keyboard_FileNameControl(struct FileNameControl * control, int c) {
 int rename_FileNameControl(struct FileNameControl * control){
     isRename = 0;
     if(strcmp(control->edit->text->data[0], control->oldName)){
-        //rename(control->oldName, control->edit->text->data[0]);
+        if(link(control->oldName, control->edit->text->data[0]) < 0){
+            DEBUGDF("link failed\n");
+        }
+        if(unlink(control->oldName) < 0){
+            DEBUGDF("unlink failed\n");
+        }
+        FileListBuffer_update_FileList(control->parent);
         DEBUGDF("old: %s,new: %s\n", control->oldName, control->edit->text->data[0]);
     }else{
         DEBUG2("no change finish\n");
