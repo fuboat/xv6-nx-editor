@@ -21,7 +21,7 @@ char *strcat(char *str1, char *str2, int len1, int len2)
     {
         len2 = 0;
     }
-    char *res = (char *)malloc(sizeof(char) * (len1 + len2));
+    char *res = (char *)malloc(sizeof(char) * (len1 + len2 + 1));
 
     for (int i = 0; i < len1; i++)
     {
@@ -270,7 +270,7 @@ struct textframe *textframe_delete(struct textframe *text, int start_row, int st
 
     if (start_row < 0) start_row = 0;
     if (start_col < 0) start_col = 0;
-    if (end_row >= text->maxrow) end_row = text->maxrow - 1, end_col = 0;
+    if (end_row >= text->maxrow) end_row = text->maxrow - 1, end_col = -1;
 
     res_text->maxrow_capacity = res_text->maxrow = text->maxrow;
     res_text->data = malloc(sizeof(char*) * res_text->maxrow_capacity);
@@ -774,16 +774,19 @@ void new_line_to_editor(struct textframe *text)
     }
 
     for (int r = len; r > text->cursor_row + 1; --r)
-    {
         new_data[r] = new_data[r - 1];
-    }
-    new_data[text->cursor_row + 1] = malloc(1);
-    new_data[text->cursor_row + 1][0] = '\0';
+
+    // 将上一行光标后的部分移到下一行去
+
+    char * curline = new_data[text->cursor_row];
+
+    new_data[text->cursor_row + 1] = substr(curline, text->cursor_col, strlen(curline) - text->cursor_col);
+    curline[text->cursor_col] = 0;
 
     text->data = new_data;
     text->maxrow = len + 1;
 
-    move_to_next_line(text);
+    move_to_pos(text, text->cursor_row + 1, 0);
 }
 
 void move_to_pos(struct textframe *text, int r, int c)
@@ -827,5 +830,18 @@ void clear_cur_line(struct textframe *text) {
         text->data[text->cursor_row] = malloc(1);
         text->data[text->cursor_row][0] = 0;
         text->cursor_col = 0;
+    }
+}
+
+void move_cur_line_to_prev_line(struct textframe * text) {
+    if (0 < text->cursor_row && text->cursor_row < text->maxrow) {
+        char * cur = text->data[text->cursor_row];
+        char * prev = text->data[text->cursor_row - 1];
+        text->data[text->cursor_row - 1] = strcat(prev, cur, strlen(prev), strlen(cur));
+        free(cur), free(prev);
+        for (int i = text->cursor_row; i + 1 < text->maxrow; ++ i)
+            text->data[i] = text->data[i + 1];
+        -- text->maxrow;
+        move_to_pos(text, text->cursor_row - 1, -1);
     }
 }
