@@ -389,6 +389,7 @@ int handle_keyboard_TextEdit(struct TextEdit *edit, int c) {
         LineEdit_set_str(edit->text, "");
         edit->text = text;
         // 计算粘贴后的光标位置
+        move_to_pos(text, edit->point1_row, edit->point1_col);
         break;
     }
     default: {
