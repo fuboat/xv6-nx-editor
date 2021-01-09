@@ -1202,7 +1202,11 @@ int Button_exec_tool(struct Button * button) {
         DEBUGDF("\\\\\\ clicked new file botton ------\n");
         //To do
         // 新文件填入filelist 放在fileswitchbar末尾 显示untitled并调用重命名
-        open("New File", O_CREATE);
+        char * pathname = toolbar->parent->fileList->path;
+        char * fullfilename = strcat(pathname, "New File", strlen(pathname), strlen("New File"));
+        if (open(fullfilename, O_CREATE) < 0){
+            DEBUGDF("createFile Fail!\n");
+        }
         FileListBuffer_update_FileList(toolbar->parent->fileList);
     }else if(!strcmp(tool_name, "New Folder")){
         DEBUGDF("\\\\\\ clicked new folder botton ------\n");
