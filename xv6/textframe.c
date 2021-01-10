@@ -185,6 +185,7 @@ int textframe_write(struct textframe *text, char *filename)
     // DEBUG("start write file\n");
     int fd = 0; //文件描述符
     printf(1, "textframe write start\n");
+    unlink(filename);
     fd = open(filename, O_CREATE | O_WRONLY);
     if (fd < 0)
     //if (!fd)

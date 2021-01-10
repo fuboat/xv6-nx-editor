@@ -143,13 +143,15 @@ int drawgbk_color(int xl, int yl, int width, int height, int color, char * gbk) 
 
     int i, j, k, x, y;
 
-    int colors[16][16];
+    int colors[16][16] = {0};
 
     for (i = 0; i < 16; i++) // 16x16点阵汉字
         for (j = 0; j < 2; j++)
             for (k = 0; k < 8; k++) {
                 if (gbk[i * 2 + j] & (0x80 >> k))
-                    colors[n % width][n / width] = color;
+                    colors[n % 16][n / 16] = color;
+                else
+                    colors[n % 16][n / 16] = -1;
                 ++ n;
             }
     
