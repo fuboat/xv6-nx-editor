@@ -532,13 +532,7 @@ void move_to_end(struct textframe *text)
 
 void LineEdit_set_str(struct textframe *text, char *str)
 {
-    for (int i = 0; i < text->maxrow; ++i)
-    {
-        free(text->data[i]);
-    }
-
-    if (text->data)
-        free(text->data);
+    struct textframe old_text = *text;
 
     memset(text, 0, sizeof(struct textframe));
 
@@ -547,6 +541,14 @@ void LineEdit_set_str(struct textframe *text, char *str)
     strcpy(text->data[0], str);
     text->maxrow_capacity = text->maxrow = 1;
     text->cursor_col = text->cursor_row = 0;
+
+    for (int i = 0; i < old_text.maxrow; ++i)
+    {
+        free(old_text.data[i]);
+    }
+
+    if (old_text.data)
+        free(old_text.data);
 }
 
 void clear_cur_line(struct textframe *text) {

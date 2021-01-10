@@ -110,19 +110,6 @@ int drawrect(int xl, int yl, int width, int height, int color) {
 
 }
 
-int drawarea_color(int xl, int yl, int width, int height, int color, int *colors) {
-    int x, y;
-
-    for (y = yl; y<yl+height; ++y)
-        for (x = xl; x < xl+width; ++x) {
-            int c = colors[x-xl + (y-yl) * width];
-            if (c != -1)
-                set_color(x, y, color);
-        }
-    
-    return 0;
-}
-
 int drawarea(int xl, int yl, int width, int height, int *colors) {
     int x, y;
 
@@ -134,18 +121,48 @@ int drawarea(int xl, int yl, int width, int height, int *colors) {
     return 0;
 }
 
+int drawarea_color(int xl, int yl, int width, int height, int color, int *colors) {
+    int x, y, i, j;
+
+    for (y = yl; y<yl+height; ++y)
+        for (x = xl; x < xl+width; ++x) {
+            j = x - xl;
+            i = y - yl;
+            j = j * 8 / width;
+            i = i * 16 / height;
+            int c = colors[j + i * 8];
+            if (c != -1)
+                set_color(x, y, color);
+        }
+    
+    return 0;
+}
+
 int drawgbk_color(int xl, int yl, int width, int height, int color, char * gbk) {
     int n = 0;
 
-    int i, j, k;
+    int i, j, k, x, y;
+
+    int colors[16][16];
+
     for (i = 0; i < 16; i++) // 16x16点阵汉字
         for (j = 0; j < 2; j++)
             for (k = 0; k < 8; k++) {
-                if (gbk[i * 2 + j] & (0x80 >> k)) {
-                    set_color(xl + n % width, yl + n / width, color);
-                }
+                if (gbk[i * 2 + j] & (0x80 >> k))
+                    colors[n % width][n / width] = color;
                 ++ n;
             }
+    
+    for (y = yl; y<yl+height; ++y)
+        for (x = xl; x < xl+width; ++x) {
+            j = x - xl;
+            i = y - yl;
+            j = j * 16 / width;
+            i = i * 16 / height;
+            int c = colors[j][i];
+            if (c != -1)
+                set_color(x, y, c);
+        }
     
     return 0;
 }

@@ -19,6 +19,9 @@ struct LineEdit {
     char * parent_type; /* "FileListBuffer" */
 };
 
+#define MIN_SCALE 0
+#define MAX_SCALE 2
+
 struct TextEdit {
     struct Area area; 
     struct textframe* text;
@@ -28,6 +31,7 @@ struct TextEdit {
     char * parent_type; /* "FileListBuffer" */
     int selecting;
     int highlight_on;
+    int scale; /*-1, 0, 1 分别表示原来的 2^-1 次方大小， 2^0 大小， 2^1 大小*/
 };
 
 struct FileNameControl {
@@ -100,7 +104,7 @@ struct FileSwitchBar {
     int searchInput;
 };
 
-#define TOOL_NUM 4
+#define TOOL_NUM 6
 
 struct ToolBar
 {
@@ -130,7 +134,7 @@ struct PinyinInput
 struct SearchFrame
 {
     struct Area area;
-    struct LineEdit *edit;
+    struct TextEdit *edit;
     struct FileSwitchBar * parent;
 };
 

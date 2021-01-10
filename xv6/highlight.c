@@ -5,7 +5,7 @@
 
 char * highlight_file[] = { ".c", ".h" };
 char * types[] = { "int", "short", "char", "void", "long", "float", "double" };
-char * reserve[] = { "if", "else", "while", "continue", "break", "for", "inline", "struct" };
+char * reserve[] = { "if", "else", "while", "continue", "break", "for", "inline", "struct", "return" };
 char * special[] = {"#", "//"};
 
 #define RGB(r,g,b) ((r >> 3) << 11 | (g >> 2) << 5 | (b >> 3))

@@ -106,8 +106,8 @@ void* get_text_point(char c){
 
 #define MAXNODE 5000
 
-int n;
-int ch[MAXNODE][26];
+static int n;
+static int ch[MAXNODE][26];
 char* hans[MAXNODE];
 
 int insert(char* s) {
@@ -123,26 +123,51 @@ int insert(char* s) {
 	return u;
 }
 
-int getnode(char* s) {
+int getdeep(char *s) {
 	int len = strlen(s);
+	int deep = 0;
 	int u = 0;
 	for (int i = 0; i < len; ++i) {
+		if (!('a' <= s[i] && s[i] <= 'z')) return u;
 		int c = s[i] - 'a';
-		if (!ch[u][c]) return -1;
+		if (!ch[u][c]) return u;
 		u = ch[u][c];
+		++ deep;
 	}
 
-	return u;
+	return deep;
+}
+
+int getnode(char* s, int *node, int *deep) {
+	int len = strlen(s);
+	int u = 0;
+	*deep = 0;
+	for (int i = 0; i < len; ++i) {
+		int c = s[i] - 'a';
+		if (!('a' <= s[i] && s[i] <= 'z') || !ch[u][c])
+			break;
+		u = ch[u][c];
+		++ *deep;
+	}
+
+	*node = u;
+
+	if (u > 0) {
+		return (*deep == len);
+	} else {
+		return -1;
+	}
 }
 
 /* 
 根据拼音(pinyin = "gan") 等，得到该拼音的第i个汉字，返回其两个字节的anscii值，存储在 c1, c2 当中。 
 函数返回值为-1时表示该整数不存在。
 */
-int get_pinyin_ith_han(char* pinyin, int i, char* c1, char* c2) {
-	int u = getnode(pinyin);
+int get_pinyin_ith_han(char* pinyin, int i, char* c1, char* c2, int *deep) {
+	int u;
+	int r = getnode(pinyin, &u, deep);
 
-	if (u == -1) {
+	if (r == -1) {
 		return -1;
 	}
 

@@ -180,7 +180,7 @@ UPROGS=\
 	_Gui\
 
 fs.img: mkfs README $(UPROGS)
-	./mkfs fs.img README $(UPROGS) hankaku.txt aTest.txt pinyin.txt hzk16-0 hzk16-1 hzk16-2 hzk16-3 hzk16-4
+	./mkfs fs.img README $(UPROGS) hankaku.txt aTest.txt pinyin.txt hzk16-0 hzk16-1 hzk16-2 hzk16-3 hzk16-4 example.c
 
 -include *.d
 

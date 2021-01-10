@@ -43,6 +43,14 @@ void mouseinit(void) {
 }
 
 void mouseintr(void) {
+    uint st;
+
+    st = inb(0x64);
+    if ((st & 0x01) == 0) {
+        count = 0;
+        return ;
+    }
+
     acquire(&mouse_lock);
 
     uint data = inb(0x60);
@@ -51,7 +59,7 @@ void mouseintr(void) {
 
     switch(count) {
         case 1:
-        if (data & 0x08) {
+        if ((data & 0x08) && (data & 0x04) == 0) {
             // data is valid.
             // get status from the bits of data.
             btn_left = !!(data & 0x01);
