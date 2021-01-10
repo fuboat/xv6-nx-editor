@@ -3,7 +3,7 @@
 #include "user.h"
 #include "fcntl.h"
 #include "textframe.h"
-#include "init_ascii.h"
+#include "init_ascii_gbk_pinyin.h"
 #include "background.h"
 
 #define RGB(r,g,b) ((r >> 3) << 11 | (g >> 2) << 5 | (b >> 3))
