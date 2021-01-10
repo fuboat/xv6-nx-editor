@@ -56,6 +56,20 @@ struct Area calc_current_area(struct Area parent_area, struct Area area) {
  * 
  **************************/
 
+void TextEdit_adjust_col_row(struct TextEdit * text) {
+    int r1 = text->point1_row;
+    int c1 = text->point1_col;
+    int r2 = text->point2_row;
+    int c2 = text->point2_col;
+
+    if (r2 < r1 || (r2 == r1 && c2 < c1)) {
+        text->point1_row = r2;
+        text->point1_col = c2;
+        text->point2_row = r1;
+        text->point2_col = c1;
+    }
+}
+
 int make_TextEdit(struct TextEdit ** pedit, void * parent, char * parent_type) {
     struct TextEdit * edit = malloc(sizeof(struct TextEdit));
     edit->area = (struct Area) {0, 0, 100, 16, 0, 0 };
@@ -125,6 +139,10 @@ int draw_TextEdit(struct TextEdit *edit, struct Area parent_area) {
        
         if(edit->point2_col != -1)
         {
+            struct TextEdit old_edit = *edit;
+
+            TextEdit_adjust_col_row(edit);
+
             if(edit->point1_row == edit->point2_row){
                 struct Area cursor_area_line;
                 //for (int i = 0; i < 10; ++ i) {
@@ -192,8 +210,12 @@ int draw_TextEdit(struct TextEdit *edit, struct Area parent_area) {
                     );
                 }
             }
+
+            edit->point1_col = old_edit.point1_col;
+            edit->point1_row = old_edit.point1_row;
+            edit->point2_col = old_edit.point2_col;
+            edit->point2_row = old_edit.point2_row;
         }
-    
     }
 
     for (int r = 0; r < text->maxrow; ++ r) {
@@ -274,15 +296,15 @@ int handle_mouse_TextEdit(struct TextEdit *edit, int x, int y, int mouse_opt) {
         if(edit->point1_row == y/font_height && edit->point1_col == x/font_width){
 
         }else{
-            if(edit->point1_row > y/font_height || (edit->point1_row == y/font_height && edit->point1_col > x/font_width)){
-                edit->point2_col = edit->point1_col;
-                edit->point2_row = edit->point1_row;
-                edit->point1_col = x/font_width;
-                edit->point1_row = y/font_height;
-            }else{
+            // if(edit->point1_row > y/font_height || (edit->point1_row == y/font_height && edit->point1_col > x/font_width)){
+            //     edit->point2_col = edit->point1_col;
+            //     edit->point2_row = edit->point1_row;
+            //     edit->point1_col = x/font_width;
+            //     edit->point1_row = y/font_height;
+            // }else{
                 edit->point2_row = y/font_height;
                 edit->point2_col = x/font_width;
-            }
+            // }
             if(edit->point1_row >= edit->text->maxrow){
                 edit->point1_row = edit->text->maxrow - 1;
             }
@@ -333,6 +355,7 @@ int handle_keyboard_TextEdit(struct TextEdit *edit, int c) {
     switch (c) {
     case ENTER:
         if(edit->point2_col != -1){
+            TextEdit_adjust_col_row(edit);
             text = textframe_delete(text, edit->point1_row, edit->point1_col, 
                                                 edit->point2_row, edit->point2_col);
             LineEdit_set_str(edit->text, "");
@@ -357,6 +380,7 @@ int handle_keyboard_TextEdit(struct TextEdit *edit, int c) {
                     move_cur_line_to_prev_line(text);
                 }
             }else{
+                TextEdit_adjust_col_row(edit);
                 text = textframe_delete(text, edit->point1_row, edit->point1_col, 
                                               edit->point2_row, edit->point2_col);
                 LineEdit_set_str(edit->text, "");
@@ -397,6 +421,7 @@ int handle_keyboard_TextEdit(struct TextEdit *edit, int c) {
             if(clip){
                 LineEdit_set_str(clip, "");
             }
+            TextEdit_adjust_col_row(edit);
             pFile->parent->parent->clipBoard = textframe_extract(text, edit->point1_row, edit->point1_col, 
                                                 edit->point2_row, edit->point2_col);
         }
@@ -412,6 +437,7 @@ int handle_keyboard_TextEdit(struct TextEdit *edit, int c) {
         }
         DEBUG2("in ctrlv \n");
         if(edit->point2_col != -1){
+            TextEdit_adjust_col_row(edit);
             text  = (textframe_delete(text, edit->point1_row, edit->point1_col, edit->point2_row, edit->point2_col));
             LineEdit_set_str(edit->text, "");
             edit->text = text;
