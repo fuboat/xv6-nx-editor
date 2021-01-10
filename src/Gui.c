@@ -3,7 +3,7 @@
 #include "user.h"
 #include "fcntl.h"
 #include "Gui.h"
-#include "init_ascii.h"
+#include "init_ascii_gbk_pinyin.h"
 #include "fs.h"
 #include "highlight.h"
 
