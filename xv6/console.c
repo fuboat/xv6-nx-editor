@@ -132,8 +132,6 @@ static ushort *crt = (ushort*)P2V(0xb8000);  // CGA memory
 static void
 cgaputc(int c)
 {
-  return ;
-
   int pos;
   
   // Cursor position: col + 80*row.
@@ -192,7 +190,6 @@ struct {
 void
 consoleintr(int (*getc)(void))
 {
-  return ;
   int c;
 
   acquire(&input.lock);
