@@ -138,7 +138,7 @@ tags: $(OBJS) entryother.S _init
 vectors.S: vectors.pl
 	perl vectors.pl > vectors.S
 
-ULIB = ulib.o usys.o printf.o umalloc.o init_ascii.o textframe.o highlight.o
+ULIB = ulib.o usys.o printf.o umalloc.o init_ascii_gbk_pinyin.o textframe.o highlight.o
 
 _%: %.o $(ULIB)
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ $^
